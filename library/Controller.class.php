@@ -277,7 +277,7 @@ class Controller {
 	}
 	
 	public function __destruct() {
-		if ( $this->response != null ) {
+		if ( $this->response !== null ) {
 			if ( $this->p->format == 'json' ) {
 				if ( Controller::isAssoc($this->response) ) {
 					if ( count(array_keys($this->response)) == 1 ) {
