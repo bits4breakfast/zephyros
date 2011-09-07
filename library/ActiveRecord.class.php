@@ -33,7 +33,7 @@ abstract class ActiveRecord extends Cachable {
 			
 			if ( is_object($id) ) {
 				foreach ( $id as $key => $value ) {
-					$this->_data[$key] => $value;					
+					$this->_data[$key] = $value;
 				}
 			} else {
 				if ( is_int($id) ) {
@@ -69,7 +69,44 @@ abstract class ActiveRecord extends Cachable {
     }
 	
 	public function __call( $name, $arguments ) {
-		
+		if ( strpos( 'add_', $name ) ) {
+			$this->add( $name, $arguments );
+		} else if ( strpos( 'remove_', $name ) ) {
+			$this->remove( $name, $arguments );
+		} else if ( strpos( 'reset_', $name ) ) {
+			$this->reset( $name );
+		} else if ( strpos( 'replace_', $name ) ) {
+			$this->replace( $name, $arguments );
+		}
+	}
+	
+	public function add( $property) {
+	
+	}
+	
+	public function remove( $property, $arguments ) {
+		if ( isset($this->_related[$key]) ) {
+			 $this->_related[$key] = array();
+		} else if ( isset($this->_data[$key]) ) {
+			$this->_data[$key] = array();
+		}
+	}
+	
+	public function reset( $property ) {
+		if ( isset($this->_related[$property]) ) {
+			 $this->_related[$property] = array();
+		} else if ( isset($this->_data[$property]) ) {
+			$this->_data[$property] = array();
+		}
+	}
+	
+	public function replace( $property, $arguments ) {
+		list( $key, $value ) = $arguments;
+		if ( isset($this->_related[$property]) ) {
+			 $this->_related[$property][$key] = $value;
+		} else if ( isset($this->_data[$property]) ) {
+			$this->_data[$property][$key] = $value;
+		}
 	}
 	
 	public function __callStatic( $name, $arguments ) {
