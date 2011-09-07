@@ -12,22 +12,22 @@ abstract class Cachable {
 		$cacheFile = $this->cacheDir.$className.'/'.$fileName;
 		
 		if( !is_file($cacheFile) ) {
-			//print "Impossible to load cache for $className #$fileName<br />";
 			return;
 		}
 		
 		$obj = unserialize(file_get_contents($this->cacheDir.$className.'/'.$fileName));
 		
 		if( !is_object($obj) ) {
-			//print "Impossible to load cache for $className #$fileName<br />";
 			return;
 		}
 		
 		$vars = $obj->__getDump();
 		
-		foreach($vars as $key=>$val)
-			if( !isset($this->$key) or (!is_object($this->$key)) or (is_object($this->$key) && get_class($this->$key)!='Mysql') )
+		foreach ( $vars as $key => $val ) {
+			if ( !isset($this->$key) or (!is_object($this->$key)) or (is_object($this->$key) && get_class($this->$key)!='Mysql') ) {
 				$this->$key = $val;
+			}
+		}
 	}
 	
 	protected function writeCache($className, $fileName) {
@@ -48,29 +48,6 @@ abstract class Cachable {
 
 		if( is_file($this->cacheDir.$className.'/'.$fileName) && file_exists($this->cacheDir.$className.'/'.$fileName) )
 			@unlink($this->cacheDir.$className.'/'.$fileName);
-	}
-	
-	final function __getDump() {
-		$vars = array();
-		
-		foreach($this as $key=>$val)
-			$vars[$key] = $val;
-		
-		return $vars;
-	}
-	
-	final function __hasObj($var) {
-		if( is_object($var) )
-			return true;
-		else if( is_array($var) ) {
-			foreach($var as $key=>$val)
-				if( $this->__hasObj($val) )
-					return true;
-			
-			return false;
-		}
-		else
-			return false;
 	}
 	
 	protected function __sleep() {
