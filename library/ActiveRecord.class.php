@@ -3,9 +3,10 @@ include_once(Config::CORE.'/Mysql.class.php');
 include_once(Config::CORE.'/Cachable.class.php');
 include_once(Config::CORE.'/Inflector.class.php');
 
-abstract class ActiveRecord extends Cachable {
+abstract class ActiveRecord {
 	
 	// Object setup
+	protected $_db = null;
 	protected $_class = '';
 	protected $_name = '';
 	protected $_plural = '';
@@ -17,19 +18,21 @@ abstract class ActiveRecord extends Cachable {
 	protected $_related = array();
 	
 	// Relations
-	protected $isLocalized = false;
-	protected $isCompletedBy = null;
-	protected $belongsTo = array();
-	protected $hasOne = array();
-	protected $hasMany = array();
-	protected $hasManyAndBelongsToMany = array();
+	protected $is_localized = false;
+	protected $is_completed_by = null;
+	protected $belongs_to = array();
+	protected $has_one = array();
+	protected $has_many = array();
+	protected $has_many_and_belongs_to_many = array();
 	
 	public function __construct( $id = NULL ) {
+		$this->_class = get_class( $this );
+		$this->_name = strtolower( $this->_class );
+		$this->_plural = Inflector::plural( $this->_name );
+		$this->_fkName = $this->_name.'_id';
+		
 		if ( $id !== NULL ) {
-			$this->_class = get_class( $this ) ;
-			$this->_name = strtolower( $this->_class );
-			$this->_plurarl = Inflector::plural( $this->_name );
-			$this->_fkName = $this->_name.'_id';
+			$this->_db = Mysql::init();
 			
 			if ( is_object($id) ) {
 				foreach ( $id as $key => $value ) {
@@ -48,7 +51,7 @@ abstract class ActiveRecord extends Cachable {
 	}
 	
 	public function __set( $key, $value ) {
-		if ( isset($this->hasOne[$key]) || isset($this->hasMany[$key]) || isset($this->hasManyAndBelongsToMany[$key]) ) {
+		if ( isset($this->has_one[$key]) || isset($this->has_many[$key]) || isset($this->has_many_and_belongs_to_many[$key]) ) {
 			$this->_related[$key] = $value;
 		} else {
 			$this->_data[$key] = $value;
@@ -69,48 +72,57 @@ abstract class ActiveRecord extends Cachable {
     }
 	
 	public function __call( $name, $arguments ) {
-		if ( strpos( 'add_', $name ) ) {
-			$this->add( $name, $arguments );
-		} else if ( strpos( 'remove_', $name ) ) {
-			$this->remove( $name, $arguments );
-		} else if ( strpos( 'reset_', $name ) ) {
-			$this->reset( $name );
-		} else if ( strpos( 'replace_', $name ) ) {
-			$this->replace( $name, $arguments );
+		if ( strpos( $name, 'add_' ) !== false ) {
+			
+			if ( empty($arguments) ) {
+				throw new Exception( 'Missing value to add to '.Inflector::plural($name) );
+			}
+			if ( !isset($arguments[1]) ) {
+				$this->add( Inflector::plural( str_replace('add_','',$name) ), $arguments[0] );
+			} else {
+				$this->add( Inflector::plural( str_replace('add_','',$name) ), $arguments[0], $arguments[1] );
+			}
+		} else if ( strpos( $name, 'remove_' ) !== false ) {
+			$this->remove( Inflector::plural( str_replace('remove_','',$name) ), $arguments );
+		} else if ( strpos( $name, 'reset_' ) !== false ) {
+			$this->reset( str_replace('reset_','',$name) );
+		} else if ( strpos( $name, 'replace_in_' ) !== false ) {
+			$this->replace( str_replace('replace_in_','',$name), $arguments );
 		}
 	}
 	
-	public function add( $property) {
-	
+	public function add( $toProperty, $value, $key = null ) {
+		if ( $key === null ) {
+			$this->_related[$toProperty][] = $value;
+		} else {
+			$this->_related[$toProperty][$key] = $value;
+		}
 	}
 	
 	public function remove( $property, $arguments ) {
-		if ( isset($this->_related[$key]) ) {
-			 $this->_related[$key] = array();
-		} else if ( isset($this->_data[$key]) ) {
-			$this->_data[$key] = array();
+		if ( isset($this->_related[$property]) ) {
+			if ( isset($this->_related[$property][$arguments[0]]) ) {
+				unset($this->_related[$property][$arguments[0]]);
+			} else {
+				$keys = array_keys( $this->_related[$property], $arguments[0] );
+				foreach ( $keys as $key ) {
+					unset( $this->_related[$property][$key] );
+				}
+			}
 		}
 	}
 	
 	public function reset( $property ) {
-		if ( isset($this->_related[$property]) ) {
-			 $this->_related[$property] = array();
-		} else if ( isset($this->_data[$property]) ) {
-			$this->_data[$property] = array();
-		}
+		$this->_related[$property] = array();
 	}
 	
 	public function replace( $property, $arguments ) {
 		list( $key, $value ) = $arguments;
-		if ( isset($this->_related[$property]) ) {
-			 $this->_related[$property][$key] = $value;
-		} else if ( isset($this->_data[$property]) ) {
-			$this->_data[$property][$key] = $value;
-		}
+		$this->_related[$property][$key] = $value;
 	}
 	
-	public function __callStatic( $name, $arguments ) {
-		if ( strpos('findBy') !== false  ) {
+	public static function __callStatic( $name, $arguments ) {
+		if ( strpos('find_by') !== false  ) {
 				
 		}
 	}
@@ -120,51 +132,59 @@ abstract class ActiveRecord extends Cachable {
 	}
 	
 	public function _load() {
-		if ( method_exists( $this, 'beforeLoading' ) ) {
-			$this->beforeLoading();
+		if ( method_exists( $this, 'before_loading' ) ) {
+			$this->before_loading();
 		}
 		
-		$query = $this->db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->db->escape($this->id).'" LIMIT 1');
+		$query = $this->_db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
 		$record = mysql_fetch_object($query);
 		foreach ( $record as $key => $value ) {
 			$this->_data[$key] = $value;
 		}
 		
-		if ( $this->isCompletedBy != '' ) {
+		if ( $this->is_completed_by != '' ) {
 			$this->_columns = array_keys($this->_data);
-			$query = $this->db->read('SELECT * FROM '.$this->isCompletedBy.' WHERE '.$this->_fkName.' = "'.$this->db->escape($this->id).'" LIMIT 1');
+			$query = $this->_db->read('SELECT * FROM '.$this->is_completed_by.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
 			$record = mysql_fetch_object($query);
 			foreach ( $record as $key => $value ) {
 				$this->_data[$key] = $value;
 			}
 		}
 		
-		if ( method_exists( $this, 'afterLoading' ) ) {
-			$this->afterLoading();
+		if ( !empty($this->has_many_and_belongs_to_many) ) {
+			foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
+				$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
+				$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_class.'_id' );
+				var_dump( $tableName );
+			}
+		}
+		
+		if ( method_exists( $this, 'after_loading' ) ) {
+			$this->after_loading();
 		}
 	}
 	
 	private function _save() {
-		if ( method_exists( $this, 'beforeSaving' ) ) {
-			$this->beforeSaving();
+		if ( method_exists( $this, 'before_saving' ) ) {
+			$this->before_saving();
 		}
 		
 		
 		
-		if ( method_exists( $this, 'afterSaving' ) ) {
-			$this->afterSaving();
+		if ( method_exists( $this, 'after_saving' ) ) {
+			$this->after_saving();
 		}
 	}
 	
 	private function _delete() {
-		if ( method_exists( $this, 'beforeDeleting' ) ) {
-			$this->beforeDeleting();
+		if ( method_exists( $this, 'before_deleting' ) ) {
+			$this->before_deleting();
 		}
 		
 		
 		
-		if ( method_exists( $this, 'afterDeleting' ) ) {
-			$this->afterDeleting();
+		if ( method_exists( $this, 'after_deleting' ) ) {
+			$this->after_deleting();
 		}
 	}
 	

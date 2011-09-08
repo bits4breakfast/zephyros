@@ -6,10 +6,10 @@ class Inflector {
 	public static function plural( $s ) { 
 	    $s = trim( $s );
 	 
-	    $isUppercase = ctype_upper($str);
+	    $isUppercase = ctype_upper($s);
 	 
-	    if (isset(Inflector::$cache[$key]))
-	        return Inflector::$cache[$key];
+	    if (isset(Inflector::$cache['plural_'.$s]))
+	        return Inflector::$cache['plural_'.$s];
 	 
 		if ( substr($s,-1) == 'y' ) {
 			$s = substr($s,0,-1).'ies';	
@@ -25,11 +25,17 @@ class Inflector {
 	    }
 	 
 	    // Set the cache and return
-	    return Inflector::$cache['plural_'.$str] = $s;
+	    return Inflector::$cache['plural_'.$s] = $s;
 	}
 	
 	public static function underscore( $s ) {
     	return preg_replace( '/\s+/', '_', trim($s) );
+	}
+	
+	public static function habtmTableName ( $first, $second ) {
+		$tableName = array( Inflector::plural( strtolower( $first ) ), Inflector::plural( strtolower($second) ) );
+		sort( $tableName );
+		return implode( '_', $tableName );
 	}
 }
 ?>
