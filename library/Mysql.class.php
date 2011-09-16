@@ -1,19 +1,9 @@
-<?
-error_reporting(E_ALL);
-
-define('MYSQL_HOST','');
-define('MYSQL_USER','');
-define('MYSQL_PASS','');
-define('MYSQL_DB','');
-
-// definisco il percorso alla libreria nel caso non lo sia gia'
-if( !defined('LIB') )
-	define('LIB', '/var/www/ehbox/trunk/library');
-
+<?php
 $environment = getenv('ENVIRONMENT');
 if ( $environment == 'test' ) {
 	define('TEST_ENVIRONMENT',true);
 	define('PROD_ENVIRONMENT',false);
+	error_reporting(E_ALL);
 } else {
 	define('TEST_ENVIRONMENT',false);
 	define('PROD_ENVIRONMENT',true);
@@ -36,7 +26,7 @@ class Mysql {
 	
 	private $forceSlave = false;
 	
-	public function __construct($server=MYSQL_HOST, $username=MYSQL_USER, $password=MYSQL_PASS, $database=MYSQL_DB){
+	public function __construct( $server = BaseConfig::DB_HOST, $username = BaseConfig::DB_USER, $password = BaseConfig::DB_PASSWORD, $database = BaseConfig::DB_DATABASE ){
 		$this->server = $server;
 		$this->username = $username;
 		$this->password = $password;
@@ -44,7 +34,7 @@ class Mysql {
 		$this->connectWrite();
 	}
 	
-	public static function init($database=MYSQL_DB, $username=MYSQL_USER, $password=MYSQL_PASS, $server=MYSQL_HOST) {
+	public static function init( $server = BaseConfig::DB_HOST, $username = BaseConfig::DB_USER, $password = BaseConfig::DB_PASSWORD, $database = BaseConfig::DB_DATABASE ) {
 		$hash = md5(getmypid().$database.$username.$password.$server);
 		
 		if( !isset(self::$instances[$hash]) )

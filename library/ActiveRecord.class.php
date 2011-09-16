@@ -16,14 +16,7 @@ abstract class ActiveRecord {
 	// Data storage
 	protected $_data = array();
 	protected $_related = array();
-	
-	// Relations
-	protected $is_localized = false;
-	protected $is_completed_by = null;
-	protected $belongs_to = array();
-	protected $has_one = array();
-	protected $has_many = array();
-	protected $has_many_and_belongs_to_many = array();
+	protected $_localized = array();
 	
 	public function __construct( $id = NULL ) {
 		$this->_class = get_class( $this );
@@ -88,6 +81,8 @@ abstract class ActiveRecord {
 			$this->reset( str_replace('reset_','',$name) );
 		} else if ( strpos( $name, 'replace_in_' ) !== false ) {
 			$this->replace( str_replace('replace_in_','',$name), $arguments );
+		} else if ( strpos( $name, 'localize_in_' ) !== false ) {
+			$this->localize( $arguments, str_replace( 'localize_in_', '', $name ) );
 		}
 	}
 	
@@ -121,6 +116,17 @@ abstract class ActiveRecord {
 		$this->_related[$property][$key] = $value;
 	}
 	
+	public function localize( $arguments, $lang = 'en' ) {
+		$lang = strtolower($lang);
+		if ( count($arguments) == 1 ) {
+			if ( isset($this->_localized[$lang][$arguments[0]]) ) {
+				return $this->_localized[$lang][$arguments[0]];
+			}
+		} else {
+			$this->_localized[$lang][$arguments[0]] = $arguments[1];
+		}
+	}
+	
 	public static function __callStatic( $name, $arguments ) {
 		if ( strpos('find_by') !== false  ) {
 				
@@ -132,39 +138,83 @@ abstract class ActiveRecord {
 	}
 	
 	public function _load() {
-		if ( method_exists( $this, 'before_loading' ) ) {
-			$this->before_loading();
-		}
-		
-		$query = $this->_db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
-		$record = mysql_fetch_object($query);
-		foreach ( $record as $key => $value ) {
-			$this->_data[$key] = $value;
-		}
-		
-		if ( $this->is_completed_by != '' ) {
-			$this->_columns = array_keys($this->_data);
-			$query = $this->_db->read('SELECT * FROM '.$this->is_completed_by.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
-			$record = mysql_fetch_object($query);
+		if ( $this->_isCached() ) {
+			$this->_readCache();
+		} else {
+			if ( method_exists( $this, 'before_loading' ) ) {
+				$this->before_loading();
+			}
+			
+			$query = $this->_db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
+			$record = $query->fetch_object();
 			foreach ( $record as $key => $value ) {
 				$this->_data[$key] = $value;
 			}
-		}
-		
-		if ( !empty($this->has_many_and_belongs_to_many) ) {
-			foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
-				$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
-				$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_class.'_id' );
-				var_dump( $tableName );
+			
+			if ( isset($this->has_one) && !empty($this->has_one) ) {
+				foreach ( $this->has_one as $relation => $details ) {
+					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+					$key = strtolower($relation);
+					
+					$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_assoc();
+				}
 			}
-		}
-		
-		if ( method_exists( $this, 'after_loading' ) ) {
-			$this->after_loading();
+			
+			if ( isset($this->has_many) && !empty($this->has_may) ) {
+				foreach ( $this->has_many as $relation => $details ) {
+					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+					$key = Inflector::plural( strtolower($relation) );
+					
+					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
+						$query = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+						while ( $value = $query->fetch_object() ) {
+							$this->_related[$key][] = $value;
+						}
+					} else {
+						$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
+						$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+						while ( list($value) = $query->fetch_assoc() ) {
+							$this->_related[$key][] = $value;
+						}
+					}
+				}
+			}
+			
+			if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
+				foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
+					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
+					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+					$key = Inflector::plural( strtolower($relation) );
+					$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
+					
+					$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+					while ( list($value) = $query->fetch_assoc() ) {
+						$this->_related[$key][] = $value;
+					}
+				}
+			}
+			
+			if ( isset($this->is_localized) && $this->is_localized ) {
+				$this->_localized = array();
+				$query = $this->db->query('SELECT * FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
+				while ( $record = mysql_fetch_object($query) ) {
+					$lang = $record->lang;
+					unset( $record->parent_id, $record->lang );
+					$this->_localized[strtolower($lang)] = $record;
+				}
+			}
+			
+			if ( method_exists( $this, 'after_loading' ) ) {
+				$this->after_loading();
+			}
+			
+			$this->_writeCache();
 		}
 	}
 	
-	private function _save() {
+	private function save() {
 		if ( method_exists( $this, 'before_saving' ) ) {
 			$this->before_saving();
 		}
@@ -174,9 +224,11 @@ abstract class ActiveRecord {
 		if ( method_exists( $this, 'after_saving' ) ) {
 			$this->after_saving();
 		}
+		
+		$this->_clearCache();
 	}
 	
-	private function _delete() {
+	private function delete() {
 		if ( method_exists( $this, 'before_deleting' ) ) {
 			$this->before_deleting();
 		}
@@ -186,16 +238,16 @@ abstract class ActiveRecord {
 		if ( method_exists( $this, 'after_deleting' ) ) {
 			$this->after_deleting();
 		}
-	}
-	
-	private function isCached($className, $fileName) {
-		return file_exists($this->_cacheDir.$className.'/'.$fileName);
-	}
-	
-	private function readCache($className, $fileName) {
-		$cacheFile = $this->_cacheDir.$className.'/'.$fileName;
 		
-		if( !is_file($cacheFile) ) {
+		$this->_clearCache();
+	}
+	
+	private function _isCached() {
+		return file_exists( $this->_cacheDir.'/'.$this->_class.'/'.$this->id );
+	}
+	
+	private function _readCache() {		
+		if( !is_file($this->_cacheDir.'/'.$this->_class.'/'.$this->id) ) {
 			return;
 		}
 		
@@ -214,20 +266,21 @@ abstract class ActiveRecord {
 		}
 	}
 	
-	private function writeCache() {
+	private function _writeCache() {
 		$content = serialize($this);
 		if ( trim($content) != "" ) {
-			@file_put_contents($this->_cacheDir.$this->_class.'/'.$this->id, $content);
+			@file_put_contents($this->_cacheDir.'/'.$this->_class.'/'.$this->id, $content);
 			@chmod($this->_cacheDir.'/'.$this->_class.'/'.$this->id,0766);
 			HttpReplicationClient::send($this->_cacheDir.'/'.$this->_class.'/'.$this->id);
 		}
 	}
 	
-	protected function clearCache() {
+	protected function _clearCache() {
 		HttpReplicationClient::remove($this->_cacheDir.'/'.$this->_class.'/'.$this->id);
 
-		if( is_file($this->_cacheDir.'/'.$this->_class.'/'.$this->id) && file_exists($this->_cacheDir.'/'.$this->_class.'/'.$this->id) )
+		if( is_file($this->_cacheDir.'/'.$this->_class.'/'.$this->id) && file_exists($this->_cacheDir.'/'.$this->_class.'/'.$this->id) ) {
 			@unlink($this->_cacheDir.'/'.$this->_class.'/'.$this->id);
+		}
 	}
 	
 	protected function __sleep() {

@@ -4,7 +4,7 @@ $Id$
 */
 include_once(LIB."/core/Mysql.class.php");
 include_once(LIB."/core/LanguageManager.class.php");
-class Controller {
+abstract class Controller {
 	protected $db = null;
 	protected $l = null;
 	protected $p = null;
@@ -30,7 +30,7 @@ class Controller {
 			$lang = mysql_escape_string(strtoupper($_POST["lang"]));
 			$_SESSION["_lang"] = $lang;
 		}
-		$this->l = new LanguageManager($lang);
+		$this->l = new LanguageManager( $lang );
 		
 		if ( $parameters->hasValidSession ) {
 			if ( !isset(Config::$webservice) || ( isset(Config::$webservice) && !Config::$webservice) ) {
