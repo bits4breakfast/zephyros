@@ -1,6 +1,5 @@
 <?php
 include_once(Config::CORE.'/Mysql.class.php');
-include_once(Config::CORE.'/Cachable.class.php');
 include_once(Config::CORE.'/Inflector.class.php');
 
 abstract class ActiveRecord {
@@ -157,7 +156,11 @@ abstract class ActiveRecord {
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					$key = strtolower($relation);
 					
-					$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_assoc();
+					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
+						$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_assoc();
+					} else {
+						$this->_related[$key] = $this->_db->result('SELECT id FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
+					}
 				}
 			}
 			

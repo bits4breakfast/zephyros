@@ -19,7 +19,7 @@ class Inflector {
 			$s .= 's';
 		}
 	 
-	    // Convert to uppsecase if nessasary
+	    // Convert to uppercase if nessasary
 	    if ( $isUppercase ) {
 	        $s = strtoupper( $s );
 	    }
@@ -37,5 +37,17 @@ class Inflector {
 		sort( $tableName );
 		return implode( '_', $tableName );
 	}
+	
+	public static function camelize( $string, $firstLetterUppercase = true ) {
+		$string = ($firstLetterUppercase?'':'x').strtolower(trim($string));
+	    $string = ucwords(preg_replace('/[\s_]+/', ' ', $string));
+	 
+	    return substr(str_replace(' ', '', $string), 1);
+	}
+		
+	public static function decamelize( $string, $separator = ' ') {
+	    return strtolower(preg_replace('/([a-z])([A-Z])/', '$1'.$separator.'$2', trim($string)));
+	}
+
 }
 ?>

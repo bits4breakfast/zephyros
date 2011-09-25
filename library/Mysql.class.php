@@ -15,90 +15,56 @@ class Mysql {
 	
 	private $writeHandler = null;
 	private $readHandler = null;
-	private $readSelection = null;
-
-	private $handler=null;
 	
-	private $server;
-	private $username;
-	private $password;
-	private $database;
-	
-	private $forceSlave = false;
-	
-	public function __construct( $server = BaseConfig::DB_HOST, $username = BaseConfig::DB_USER, $password = BaseConfig::DB_PASSWORD, $database = BaseConfig::DB_DATABASE ){
-		$this->server = $server;
-		$this->username = $username;
-		$this->password = $password;
-		$this->database = $database;
+	public function __construct(){
 		$this->connectWrite();
 	}
 	
-	public static function init( $server = BaseConfig::DB_HOST, $username = BaseConfig::DB_USER, $password = BaseConfig::DB_PASSWORD, $database = BaseConfig::DB_DATABASE ) {
-		$hash = md5(getmypid().$database.$username.$password.$server);
+	public static function init(  ) {
+		$hash = md5( getmypid() . BaseConfig::DB_USER . BaseConfig::DB_PASSWORD . BaseConfig::DB_DATABASE );
 		
 		if( !isset(self::$instances[$hash]) )
-			self::$instances[$hash] = new Mysql($server, $username, $password, $database);
+			self::$instances[$hash] = new Mysql();
 		
 		return self::$instances[$hash];
 	}
 	
-	public function setForceSlave() {
-		$this->forceSlave = true;
-	}
-	
-	private function connect() {
-		$this->handler = new mysqli($this->server,$this->username,$this->password,$this->database);
-	}
-	
 	private function connectWrite() {
-		$this->writeHandler = new mysqli('master01',$this->username,$this->password,$this->database);
+		$this->writeHandler = new mysqli( BaseConfig::DB_MASTER_HOST, BaseConfig::DB_USER, BaseConfig::DB_PASSWORD, BaseConfig::DB_DATABASE );
 	}
 	
 	private function connectRead() {
-		if ($this->forceSlave) {
-			$this->readHandler = new mysqli('slave01',$this->username,$this->password,$this->database);
-		} else {
-			$temp = array("master01","slave01");
-			$this->readSelection = (rand()&1);
-			if (($this->readSelection == 0 && $this->writeHandler == null) || $this->readSelection != 0) {
-				$slaveDelay = file_get_contents("/var/www/logs/slaveStatus.log");
-				if ($this->readSelection > 0 && ( $slaveDelay == "NULL" || trim($slaveDelay) == "" || $slaveDelay == null || (int) $slaveDelay > 0)) {
-					$this->readSelection = 0;
-				}
-				$this->readHandler = new mysqli($temp[$this->readSelection],$this->username,$this->password,$this->database);
-			} elseif ($this->readSelection == 0 && $this->writeHandler != null) {
-				$this->readHandler = $this->writeHandler;
+		$temp = array("master01","slave01");
+		$readSelection = (rand()&1);
+		if ( ($readSelection == 0 && $this->writeHandler == null) || $readSelection != 0 ) {
+			$slaveDelay = ( file_exists( Config::LOGS."/slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) ? file_get_contents( Config::LOGS."/slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) : 0 );
+			if ( $readSelection > 0 && ( $slaveDelay == "NULL" || trim($slaveDelay) == "" || $slaveDelay == null || (int) $slaveDelay > 0) ) {
+				$readSelection = 0;
 			}
+			$this->readHandler = new mysqli( BaseConfig::$slavesPool[$readSelection], BaseConfig::DB_USER, BaseConfig::DB_PASSWORD, BaseConfig::DB_DATABASE );
+		} elseif ( $readSelection == 0 && $this->writeHandler != null ) {
+			$this->readHandler = $this->writeHandler;
 		}
 	}
 	
-	public function read($query,$forceMaster=false) {
+	public function read( $query, $forceMaster = false ) {
 		if ( $forceMaster ) {
-			return $this->write($query);
+			return $this->write( $query );
 		} else {
 			# if not connected
-			if($this->readHandler == null)
+			if ( $this->readHandler == null ) {
 				$this->connectRead();
+			}
 			
 			return $this->readHandler->query($query);
 		}
 	}
 	
-	public function write($query) {			
-		return $this->writeHandler->query($query);
-	}
-	
-	public function query($query) {
-		# if not connected
-		if($this->handler == null) {
-			$this->connect();
-		}
-		
-		return $this->handler->query($query);
+	public function write( $query ) {
+		return $this->writeHandler->query( $query );
 	}
 
-	public function result($query, $field=false,$forceMaster=true){
+	public function result( $query, $field = false, $forceMaster = true ){
 		$query = $this->read($query,$forceMaster);
 		
 		if ( $query and $query->num_rows ) {
