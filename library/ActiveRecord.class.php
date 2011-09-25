@@ -1,6 +1,6 @@
 <?php
-include_once(Config::CORE.'/Mysql.class.php');
-include_once(Config::CORE.'/Inflector.class.php');
+include_once(BaseConfig::BASE_PATH.'/library/Mysql.class.php');
+include_once(BaseConfig::BASE_PATH.'/library/Inflector.class.php');
 
 abstract class ActiveRecord {
 	

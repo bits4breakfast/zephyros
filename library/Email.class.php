@@ -1,6 +1,6 @@
 <?php
-include_once(LIB."/core/Replica.class.php");
-require_once(LIB.'/core/LanguageManager.class.php');
+include_once(BaseConfig::BASE_PATH.'/library/Replica.class.php');
+require_once(BaseConfig::BASE_PATH.'/library/LanguageManager.class.php');
 
 class Email {
 	

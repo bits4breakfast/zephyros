@@ -2,8 +2,8 @@
 /*
 $Id$
 */
-include_once(LIB."/core/Mysql.class.php");
-include_once(LIB."/core/LanguageManager.class.php");
+include_once(BaseConfig::BASE_PATH.'/library/Mysql.class.php');
+include_once(BaseConfig::BASE_PATH.'/library/LanguageManager.class.php');
 abstract class Controller {
 	protected $db = null;
 	protected $l = null;
@@ -18,7 +18,7 @@ abstract class Controller {
 	const ERROR_NOT_FOUND = 404;
 	
 	public function __construct(RouteParameters $parameters) {
-		$this->db = Mysql::create();
+		$this->db = Mysql::init();
 
 		$lang = "EN";
 		if ( isset($_SESSION["_lang"]) ) {

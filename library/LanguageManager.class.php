@@ -1,5 +1,4 @@
 <?php
-
 class LanguageManager {
 
 	private static $singletonInstances = array();	///< Array of LanguageManager Resources. Singleton instance pointers
@@ -10,7 +9,7 @@ class LanguageManager {
 	
 	
 	public function __construct( $language = 'EN' ) {
-		$this->db = Mysql::create();
+		$this->db = Mysql::init();
 		
 		$this->language = strtoupper($language);
 	}

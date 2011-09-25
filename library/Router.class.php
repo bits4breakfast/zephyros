@@ -2,8 +2,7 @@
 /*
 $Id$
 */
-include_once(LIB."/core/Controller.class.php");
-include_once(LIB."/core/LanguageManager.class.php");
+include_once(BaseConfig::BASE_PATH.'/library/Controller.class.php');
 
 class RouteParameters {
 	private static $instance = null;
