@@ -2,6 +2,16 @@
 /*
 $Id$
 */
+$environment = getenv('ENVIRONMENT');
+if ( $environment == 'test' ) {
+	define('TEST_ENVIRONMENT',true);
+	define('PROD_ENVIRONMENT',false);
+	error_reporting(E_ALL);
+} else {
+	define('TEST_ENVIRONMENT',false);
+	define('PROD_ENVIRONMENT',true);
+}
+
 include_once(BaseConfig::BASE_PATH.'/library/Controller.class.php');
 
 class RouteParameters {
@@ -15,7 +25,7 @@ class RouteParameters {
 	public $hasValidSession = false;
 	public $mobile = false;
 	
-	public static function create() {
+	public static function init() {
 		if ( self::$instance == null ) {
 			self::$instance = new RouteParameters();
 		}
@@ -35,7 +45,7 @@ class Router {
 		ob_start();
 		session_start();
 		
-		$this->p = RouteParameters::create();
+		$this->p = RouteParameters::init();
 		if (isset($_POST["_method"])) {
 			// POST -> UPDATE ~~~~~ PUT -> INSERT
 			if ($_POST["_method"] != "POST" && $_POST["_method"] != "PUT" && $_POST["_method"] != "DELETE") {

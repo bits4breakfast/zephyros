@@ -30,7 +30,7 @@ abstract class Controller {
 			$lang = mysql_escape_string(strtoupper($_POST["lang"]));
 			$_SESSION["_lang"] = $lang;
 		}
-		$this->l = new LanguageManager( $lang );
+		$this->l = LanguageManager::init( $lang );
 		
 		if ( $parameters->hasValidSession ) {
 			if ( !isset(Config::$webservice) || ( isset(Config::$webservice) && !Config::$webservice) ) {
@@ -220,7 +220,6 @@ abstract class Controller {
 	    }
 	    if ( is_string($obj) ) {
 			$obj = new SimpleXMLElement( $obj );
-			//print_r($obj);
 		}
 	
 	    $children = $obj->children();

@@ -1,14 +1,4 @@
 <?php
-$environment = getenv('ENVIRONMENT');
-if ( $environment == 'test' ) {
-	define('TEST_ENVIRONMENT',true);
-	define('PROD_ENVIRONMENT',false);
-	error_reporting(E_ALL);
-} else {
-	define('TEST_ENVIRONMENT',false);
-	define('PROD_ENVIRONMENT',true);
-}
-
 class Mysql {
 	
 	private static $instances = array();
