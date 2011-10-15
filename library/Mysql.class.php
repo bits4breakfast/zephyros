@@ -24,8 +24,7 @@ class Mysql {
 	}
 	
 	private function connectRead() {
-		$temp = array("master01","slave01");
-		$readSelection = (rand()&1);
+		$readSelection = ( rand() & count(BaseConfig::$slavesPool) );
 		if ( ($readSelection == 0 && $this->writeHandler == null) || $readSelection != 0 ) {
 			$slaveDelay = ( file_exists( Config::LOGS."/slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) ? file_get_contents( Config::LOGS."/slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) : 0 );
 			if ( $readSelection > 0 && ( $slaveDelay == "NULL" || trim($slaveDelay) == "" || $slaveDelay == null || (int) $slaveDelay > 0) ) {

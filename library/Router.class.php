@@ -2,8 +2,7 @@
 /*
 $Id$
 */
-$environment = getenv('ENVIRONMENT');
-if ( $environment == 'test' ) {
+if ( getenv('ENVIRONMENT') == 'test' ) {
 	define('TEST_ENVIRONMENT',true);
 	define('PROD_ENVIRONMENT',false);
 	error_reporting(E_ALL);
@@ -12,7 +11,7 @@ if ( $environment == 'test' ) {
 	define('PROD_ENVIRONMENT',true);
 }
 
-include_once(BaseConfig::BASE_PATH.'/library/Controller.class.php');
+include_once(BaseConfig::LIB.'/Controller.class.php');
 
 class RouteParameters {
 	private static $instance = null;
@@ -155,4 +154,8 @@ class Router {
 	}
 }
 $__r = new Router();
+
+function __autoload( $className ) {
+	include( BaseConfig::BASE_PATH.'/application/model/'.$className.'.class.php' );
+}
 ?>

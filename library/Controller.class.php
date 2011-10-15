@@ -2,8 +2,8 @@
 /*
 $Id$
 */
-include_once(BaseConfig::BASE_PATH.'/library/Mysql.class.php');
-include_once(BaseConfig::BASE_PATH.'/library/LanguageManager.class.php');
+include_once( BaseConfig::BASE_PATH.'/library/ActiveRecord.class.php' );
+include_once( BaseConfig::BASE_PATH.'/library/LanguageManager.class.php' );
 abstract class Controller {
 	protected $db = null;
 	protected $l = null;
