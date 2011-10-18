@@ -11,7 +11,13 @@ if ( getenv('ENVIRONMENT') == 'test' ) {
 	define('PROD_ENVIRONMENT',true);
 }
 
-include_once(BaseConfig::LIB.'/Controller.class.php');
+include BaseConfig::LIB.'/Controller.class.php';
+
+function class_loader( $className ) {
+	include BaseConfig::BASE_PATH.'/application/model/'.$className.'.class.php';
+}
+
+spl_autoload_register( 'class_loader' );
 
 class RouteParameters {
 	private static $instance = null;
@@ -143,19 +149,15 @@ class Router {
 			}
 		}
 		
-		if (!file_exists(LIB."/controllers/".SUBDOMAINFOLDER."/".ucfirst($this->p->controller)."Controller.class.php")) {
-			$this->__toError(Router::ERROR_NOT_FOUND);
-		} else {
-			include_once(LIB."/controllers/".SUBDOMAINFOLDER."/".ucfirst($this->p->controller)."Controller.class.php");
+		if ( file_exists(BaseConfig::BASE_PATH.'/application/controllers/'.Config::SUBDOMAIN.'/'.ucfirst($this->p->controller).'Controller.class.php') ) {
+			include BaseConfig::BASE_PATH.'/application/controllers/'.Config::SUBDOMAIN.'/'.ucfirst($this->p->controller).'Controller.class.php';
 			$className = ucfirst($this->p->controller)."Controller";
 			$__c = new $className($this->p);
 			$__c->render();
+		} else {
+			$this->__toError(Router::ERROR_NOT_FOUND);
 		}
 	}
 }
 $__r = new Router();
-
-function __autoload( $className ) {
-	include( BaseConfig::BASE_PATH.'/application/model/'.$className.'.class.php' );
-}
 ?>

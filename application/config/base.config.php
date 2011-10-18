@@ -9,6 +9,6 @@ class BaseConfig {
 	
 	const LOGS_PATH = '';
 	const BASE_PATH = '';
-	
+	const LIB = '';
 }
 ?>

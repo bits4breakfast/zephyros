@@ -17,7 +17,7 @@ abstract class Controller {
 	const ERROR_BAD_REQUEST = 400;
 	const ERROR_NOT_FOUND = 404;
 	
-	public function __construct(RouteParameters $parameters) {
+	public function __construct( RouteParameters $parameters ) {
 		$this->db = Mysql::init();
 
 		$lang = "EN";
