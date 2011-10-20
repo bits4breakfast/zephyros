@@ -14,7 +14,13 @@ if ( getenv('ENVIRONMENT') == 'test' ) {
 include BaseConfig::LIB.'/Controller.class.php';
 
 function class_loader( $className ) {
-	include BaseConfig::BASE_PATH.'/application/model/'.$className.'.class.php';
+	if ( $className == 'Mysql' ) {
+		include BaseConfig::BASE_PATH.'/library/Mysql.class.php';
+	} else if ( $className == 'HttpReplicationClient' ) {
+		include BaseConfig::BASE_PATH.'/library/Replica.class.php';
+	} else {
+		include BaseConfig::BASE_PATH.'/application/model/'.str_replace('_', '/', $className).'.class.php';
+	}
 }
 
 spl_autoload_register( 'class_loader' );
@@ -61,11 +67,13 @@ class Router {
 		} else {
 			$this->p->method = $_SERVER['REQUEST_METHOD'];
 		}
+		
 		$uri = substr($_SERVER["REQUEST_URI"],1);
 		if ( strpos($uri,"?") !== false ) {
 			$uri = explode("?",$uri);
 			$uri = $uri[0];
 		}
+		
 		if ( substr($uri,0,2) == 'm/' ) {
 			$this->p->mobile = true;
 			$uri = substr($uri,2);
@@ -100,6 +108,7 @@ class Router {
 		} else {
 			$this->p->id = mysql_escape_string($this->p->id);
 		}
+		
 		if ( !isset(Config::$webservice) || ( isset(Config::$webservice) && !Config::$webservice) ) {
 			if ( isset($_SESSION["userId"]) && $_SESSION["userId"] != 0 ) {
 				$this->p->hasValidSession = true;
@@ -113,11 +122,12 @@ class Router {
 				$this->p->hasValidSession = true;
 			}
 		}
+		
 		$this->route();
 	}
 	
-	public function __toError($errorCode = 0) {
-		switch ( $errorCode ) {
+	public function __toError( $code = 0 ) {
+		switch ( $code ) {
 			default:
 			case Router::ERROR_BAD_REQUEST:
 				header('HTTP/1.0 400 Bad Request');
@@ -137,6 +147,7 @@ class Router {
 			if ( !$this->p->hasValidSession && !in_array($this->p->controller,Config::$doesntRequireAuthentication) ) {
 				header("Location: /".Config::$doesntRequireAuthentication[0]); // Il primo elemento dell'array viene considerato quello a cui rimandare l'utente nel caso di sessione mancante
 			}
+			
 			if ($this->p->controller == "") {
 				$this->p->controller = "homepage";
 			}
@@ -144,6 +155,7 @@ class Router {
 			if ( !in_array($this->p->controller,Config::$doesntRequireAuthentication) && !$this->p->hasValidSession ) {
 				$this->__toError(Router::ERROR_UNAUTHORIZED);
 			}
+			
 			if ($this->p->controller == "") {
 				$this->__toError(Router::ERROR_BAD_REQUEST);
 			}

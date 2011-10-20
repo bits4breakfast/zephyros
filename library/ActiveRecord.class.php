@@ -1,10 +1,10 @@
 <?php
-include_once BaseConfig::BASE_PATH.'/library/Mysql.class.php';
 include_once BaseConfig::BASE_PATH.'/library/Inflector.class.php';
 
 abstract class ActiveRecord {
 	
 	// Object setup
+	protected $_driver = 'mysql';
 	protected $_db = null;
 	protected $_class = '';
 	protected $_name = '';
@@ -23,8 +23,11 @@ abstract class ActiveRecord {
 		$this->_plural = Inflector::plural( $this->_name );
 		$this->_fkName = $this->_name.'_id';
 		
-		if ( $id !== NULL ) {
+		if ( $this->_driver == 'mysql' ) {
 			$this->_db = Mysql::init();
+		}
+		
+		if ( $id !== NULL ) {
 			
 			if ( is_object($id) ) {
 				foreach ( $id as $key => $value ) {
@@ -65,7 +68,6 @@ abstract class ActiveRecord {
 	
 	public function __call( $name, $arguments ) {
 		if ( strpos( $name, 'add_' ) !== false ) {
-			
 			if ( empty($arguments) ) {
 				throw new Exception( 'Missing value to add to '.Inflector::plural($name) );
 			}
@@ -146,8 +148,10 @@ abstract class ActiveRecord {
 			
 			$query = $this->_db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
 			$record = $query->fetch_object();
-			foreach ( $record as $key => $value ) {
-				$this->_data[$key] = $value;
+			if ( $record != null ) {
+				foreach ( $record as $key => $value ) {
+					$this->_data[$key] = $value;
+				}
 			}
 			
 			if ( isset($this->has_one) && !empty($this->has_one) ) {
@@ -217,21 +221,37 @@ abstract class ActiveRecord {
 		}
 	}
 	
-	private function save() {
-		if ( method_exists( $this, 'before_saving' ) ) {
-			$this->before_saving();
+	public function save() {
+		if ( !empty($this->_data) ) {
+			if ( method_exists( $this, 'before_saving' ) ) {
+				$this->before_saving();
+			}
+			
+			$fields = '';
+			$values = '';
+			$update = '';
+			foreach ( $this->_data as $key => $value ) {
+				$fields .= '`'.$key.'`,';
+				$values .= '"'.$this->_db->escape($value).'",';
+				$update .= '`'.$key.'` = "'.$this->_db->escape($value).'",';
+			}
+			$fields = substr($fields,0,-1);
+			$values = substr($values,0,-1);
+			$update = substr($update,0,-1);
+			
+			$query = 'INSERT INTO '.$this->_plural.'('.$fields.') VALUES ('.$values.') ON DUPLICATE KEY UPDATE '.$update;
+	
+			print $query."\n";
+			
+			if ( method_exists( $this, 'after_saving' ) ) {
+				$this->after_saving();
+			}
+			
+			$this->_clearCache();
 		}
-		
-		
-		
-		if ( method_exists( $this, 'after_saving' ) ) {
-			$this->after_saving();
-		}
-		
-		$this->_clearCache();
 	}
 	
-	private function delete() {
+	public function delete() {
 		if ( method_exists( $this, 'before_deleting' ) ) {
 			$this->before_deleting();
 		}
@@ -263,7 +283,7 @@ abstract class ActiveRecord {
 		$vars = $obj->__getDump();
 		
 		foreach ( $vars as $key => $val ) {
-			if ( !isset($this->$key) or (!is_object($this->$key)) or (is_object($this->$key) && get_class($this->$key)!='Mysql') ) {
+			if ( !isset($this->$key) or (!is_object($this->$key)) or (is_object($this->$key) && get_class($this->$key) != 'Mysql' ) ) {
 				$this->$key = $val;
 			}
 		}
@@ -287,7 +307,7 @@ abstract class ActiveRecord {
 	}
 	
 	protected function __sleep() {
-		return array();
+		return array( '_data', '_related', '_localized' );
 	}
 }
 ?>
