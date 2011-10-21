@@ -17,7 +17,7 @@ abstract class ActiveRecord {
 	protected $_related = array();
 	protected $_localized = array();
 	
-	public function __construct( $id = NULL ) {
+	public function __construct( $id = NULL, $load = true ) {
 		$this->_class = get_class( $this );
 		$this->_name = strtolower( $this->_class );
 		$this->_plural = Inflector::plural( $this->_name );
@@ -40,7 +40,9 @@ abstract class ActiveRecord {
 					$this->_data['id'] = trim($id);
 				}
 				
-				$this->_load();
+				if ( $load ) {
+					$this->_load();
+				}
 			}
 		}
 	}
@@ -147,11 +149,15 @@ abstract class ActiveRecord {
 			}
 			
 			$query = $this->_db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
-			$record = $query->fetch_object();
-			if ( $record != null ) {
-				foreach ( $record as $key => $value ) {
-					$this->_data[$key] = $value;
+			if ( $query != null ) {
+				$record = $query->fetch_object();
+				if ( $record != null ) {
+					foreach ( $record as $key => $value ) {
+						$this->_data[$key] = $value;
+					}
 				}
+			} else {
+				throw new Exception( 'Table '.$this->_plural.' does not exist' );
 			}
 			
 			if ( isset($this->has_one) && !empty($this->has_one) ) {
@@ -161,7 +167,7 @@ abstract class ActiveRecord {
 					$key = strtolower($relation);
 					
 					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
-						$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_assoc();
+						$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_object();
 					} else {
 						$this->_related[$key] = $this->_db->result('SELECT id FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
 					}
@@ -176,14 +182,22 @@ abstract class ActiveRecord {
 					
 					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
 						$query = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
-						while ( $value = $query->fetch_object() ) {
-							$this->_related[$key][] = $value;
+						if ( $query != null ) {
+							while ( $record = $query->fetch_object() ) {
+								$this->_related[$key][] = $record;
+							}
+						} else {
+							throw new Exception( 'Table '.$tableName.' does not exist' );
 						}
 					} else {
 						$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
 						$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
-						while ( list($value) = $query->fetch_assoc() ) {
-							$this->_related[$key][] = $value;
+						if ( $query != null ) {
+							while ( list($record) = $query->fetch_object() ) {
+								$this->_related[$key][] = $record;
+							}
+						} else {
+							throw new Exception( 'Table '.$tableName.' does not exist' );
 						}
 					}
 				}
@@ -197,8 +211,12 @@ abstract class ActiveRecord {
 					$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
 					
 					$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
-					while ( list($value) = $query->fetch_assoc() ) {
-						$this->_related[$key][] = $value;
+					if ( $query != null ) {
+						while ( list($record) = $query->fetch_object() ) {
+							$this->_related[$key][] = $record;
+						}
+					} else {
+						throw new Exception( 'Table '.$tableName.' does not exist' );
 					}
 				}
 			}
@@ -206,10 +224,14 @@ abstract class ActiveRecord {
 			if ( isset($this->is_localized) && $this->is_localized ) {
 				$this->_localized = array();
 				$query = $this->db->query('SELECT * FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
-				while ( $record = mysql_fetch_object($query) ) {
-					$lang = $record->lang;
-					unset( $record->parent_id, $record->lang );
-					$this->_localized[strtolower($lang)] = $record;
+				if ( $query != null ) {
+					while ( $record = $query->fetch_object() ) {
+						$lang = $record->lang;
+						unset( $record->parent_id, $record->lang );
+						$this->_localized[strtolower($lang)] = $record;
+					}
+				} else {
+					throw new Exception( 'Table '.$tableName.' does not exist' );
 				}
 			}
 			
@@ -239,9 +261,7 @@ abstract class ActiveRecord {
 			$values = substr($values,0,-1);
 			$update = substr($update,0,-1);
 			
-			$query = 'INSERT INTO '.$this->_plural.'('.$fields.') VALUES ('.$values.') ON DUPLICATE KEY UPDATE '.$update;
-	
-			print $query."\n";
+			$this->_db->write( $query = 'INSERT INTO '.$this->_plural.'('.$fields.') VALUES ('.$values.') ON DUPLICATE KEY UPDATE '.$update );
 			
 			if ( method_exists( $this, 'after_saving' ) ) {
 				$this->after_saving();
@@ -256,7 +276,9 @@ abstract class ActiveRecord {
 			$this->before_deleting();
 		}
 		
-		
+		if ( $this->_driver == 'mysql' ) {
+			$this->_db->write( 'DELETE FROM '.$this->_plural.' WHERE id = '.$this->id );
+		}
 		
 		if ( method_exists( $this, 'after_deleting' ) ) {
 			$this->after_deleting();
@@ -266,15 +288,15 @@ abstract class ActiveRecord {
 	}
 	
 	private function _isCached() {
-		return file_exists( $this->_cacheDir.'/'.$this->_class.'/'.$this->id );
+		return file_exists( BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache' );
 	}
 	
 	private function _readCache() {		
-		if( !is_file($this->_cacheDir.'/'.$this->_class.'/'.$this->id) ) {
+		if( !is_file( BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id ) ) {
 			return;
 		}
 		
-		$obj = unserialize(file_get_contents($this->_cacheDir.$this->_class.'/'.$this->id));
+		$obj = unserialize(file_get_contents(BaseConfig::CACHE_PATH.$this->_class.'/'.$this->id.'.cache'));
 		
 		if( !is_object($obj) ) {
 			return;
@@ -292,17 +314,20 @@ abstract class ActiveRecord {
 	private function _writeCache() {
 		$content = serialize($this);
 		if ( trim($content) != "" ) {
-			@file_put_contents($this->_cacheDir.'/'.$this->_class.'/'.$this->id, $content);
-			@chmod($this->_cacheDir.'/'.$this->_class.'/'.$this->id,0766);
-			HttpReplicationClient::send($this->_cacheDir.'/'.$this->_class.'/'.$this->id);
+			if ( !file_exists(BaseConfig::CACHE_PATH.'/'.$this->_class) ) {
+				mkdir(BaseConfig::CACHE_PATH.'/'.$this->_class, 0777, true);
+			}
+			@file_put_contents(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache', $content);
+			@chmod(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache',0766);
+			HttpReplicationClient::send(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache');
 		}
 	}
 	
-	protected function _clearCache() {
-		HttpReplicationClient::remove($this->_cacheDir.'/'.$this->_class.'/'.$this->id);
+	private function _clearCache() {
+		HttpReplicationClient::remove(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache');
 
-		if( is_file($this->_cacheDir.'/'.$this->_class.'/'.$this->id) && file_exists($this->_cacheDir.'/'.$this->_class.'/'.$this->id) ) {
-			@unlink($this->_cacheDir.'/'.$this->_class.'/'.$this->id);
+		if( is_file(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id) && file_exists(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id) ) {
+			@unlink(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id);
 		}
 	}
 	

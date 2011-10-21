@@ -7,8 +7,8 @@ class BaseConfig {
 	const DB_DATABASE = '';
 	static $slavesPool = array();
 	
-	const LOGS_PATH = '';
 	const BASE_PATH = '';
-	const LIB = '';
+	const CACHE_PATH = '';
+	const LOGS_PATH = '';
 }
 ?>

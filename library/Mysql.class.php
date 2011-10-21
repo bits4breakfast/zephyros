@@ -10,13 +10,17 @@ class Mysql {
 		$this->connectWrite();
 	}
 	
-	public static function init(  ) {
+	public static function init() {
 		$hash = md5( getmypid() . BaseConfig::DB_USER . BaseConfig::DB_PASSWORD . BaseConfig::DB_DATABASE );
 		
 		if( !isset(self::$instances[$hash]) )
 			self::$instances[$hash] = new Mysql();
 		
 		return self::$instances[$hash];
+	}
+	
+	public static function release() {
+		self::$instances = array();
 	}
 	
 	private function connectWrite() {
