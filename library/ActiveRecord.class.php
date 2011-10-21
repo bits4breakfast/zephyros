@@ -34,7 +34,7 @@ abstract class ActiveRecord {
 					$this->_data[$key] = $value;
 				}
 			} else {
-				if ( is_int($id) ) {
+				if ( is_numeric($id) ) {
 					$this->_data['id'] = (int) $id;
 				} else {
 					$this->_data['id'] = trim($id);
@@ -167,9 +167,9 @@ abstract class ActiveRecord {
 					$key = strtolower($relation);
 					
 					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
-						$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_object();
+						$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_object();
 					} else {
-						$this->_related[$key] = $this->_db->result('SELECT id FROM '.$tableName.' WHERE '.$this->_fkName.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
+						$this->_related[$key] = $this->_db->result('SELECT id FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
 					}
 				}
 			}
@@ -249,19 +249,44 @@ abstract class ActiveRecord {
 				$this->before_saving();
 			}
 			
-			$fields = '';
-			$values = '';
-			$update = '';
-			foreach ( $this->_data as $key => $value ) {
-				$fields .= '`'.$key.'`,';
-				$values .= '"'.$this->_db->escape($value).'",';
-				$update .= '`'.$key.'` = "'.$this->_db->escape($value).'",';
+			$this->_db->upsert( $this->_plural, $this->_data );
+						
+			if ( isset($this->has_one) && !empty($this->has_one) ) {
+				foreach ( $this->has_one as $relation => $details ) {
+					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
+						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+						$this->_db->upsert( $tableName, $this->_related[strtolower($relation)] );
+					}
+				}
 			}
-			$fields = substr($fields,0,-1);
-			$values = substr($values,0,-1);
-			$update = substr($update,0,-1);
 			
-			$this->_db->write( $query = 'INSERT INTO '.$this->_plural.'('.$fields.') VALUES ('.$values.') ON DUPLICATE KEY UPDATE '.$update );
+			if ( isset($this->has_many) && !empty($this->has_may) ) {
+				foreach ( $this->has_many as $relation => $details ) {
+					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
+						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+						$key = Inflector::plural( strtolower($relation) );
+						
+						$this->_db->write('DELETE FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+						$this->_db->upsert( $tableName, $this->_related[strtolower($relation)] );
+					}
+				}
+			}
+			
+			if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
+				foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
+					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
+					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+					$key = Inflector::plural( strtolower($relation) );
+					$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
+					
+					$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+				}
+			}
+			
+			if ( isset($this->is_localized) && $this->is_localized ) {
+				$this->db->write('DELETE FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
+			}
 			
 			if ( method_exists( $this, 'after_saving' ) ) {
 				$this->after_saving();

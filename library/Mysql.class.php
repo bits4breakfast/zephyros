@@ -56,6 +56,22 @@ class Mysql {
 	public function write( $query ) {
 		return $this->writeHandler->query( $query );
 	}
+	
+	public function upsert( $table, $data ) {
+		$fields = '';
+		$values = '';
+		$update = '';
+		foreach ( $data as $key => $value ) {
+			$fields .= '`'.$key.'`,';
+			$values .= '"'.$this->escape($value).'",';
+			$update .= '`'.$key.'` = "'.$this->escape($value).'",';
+		}
+		$fields = substr($fields,0,-1);
+		$values = substr($values,0,-1);
+		$update = substr($update,0,-1);
+		
+		return $this->write( $query = 'INSERT INTO '.$table.'('.$fields.') VALUES ('.$values.') ON DUPLICATE KEY UPDATE '.$update );
+	} 
 
 	public function result( $query, $field = false, $forceMaster = true ){
 		$query = $this->read($query,$forceMaster);
