@@ -13,17 +13,21 @@ if ( getenv('ENVIRONMENT') == 'test' ) {
 
 include BaseConfig::LIB.'/Controller.class.php';
 
-function class_loader( $className ) {
+function zephyros_class_loader( $className ) {
 	if ( $className == 'Mysql' ) {
 		include BaseConfig::BASE_PATH.'/library/Mysql.class.php';
 	} else if ( $className == 'HttpReplicationClient' ) {
 		include BaseConfig::BASE_PATH.'/library/Replica.class.php';
+	} else if ( $className == 'UserInterface' ) {
+		include BaseConfig::BASE_PATH.'/library/UserInterface.class.php';
+	} else if ( substr($className, -2) == 'UI' ) {
+		include BaseConfig::BASE_PATH.'/application/interfaces/'.Config::SUBDOMAIN.'/'.str_replace('_', '/', $className).'.class.php';
 	} else {
 		include BaseConfig::BASE_PATH.'/application/model/'.str_replace('_', '/', $className).'.class.php';
 	}
 }
 
-spl_autoload_register( 'class_loader' );
+spl_autoload_register( 'zephyros_class_loader' );
 
 class RouteParameters {
 	private static $instance = null;
@@ -83,15 +87,15 @@ class Router {
 		
 		
 		foreach ( array('json','xml') as $format ) {
-			if (strpos($this->p->id,".".$format) !== false) {
+			if ( strpos($this->p->id,".".$format) !== false ) {
 				$this->p->format = $format;
 				$this->p->id = str_replace(".".$format,"",$this->p->id);
 				break;
-			} else if (strpos($this->p->controller,".".$format) !== false) {
+			} else if ( strpos($this->p->controller,".".$format) !== false ) {
 				$this->p->format = $format;
 				$this->p->controller = str_replace(".".$format,"",$this->p->controller);
 				break;
-			} else if (strpos($this->p->action,".".$format) !== false) {
+			} else if ( strpos($this->p->action,".".$format) !== false ) {
 				$this->p->format = $format;
 				$this->p->action = str_replace(".".$format,"",$this->p->action);
 				break;

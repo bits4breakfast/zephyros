@@ -294,6 +294,8 @@ abstract class Controller {
 			} else {
 				if ( is_array($this->response) ) {
 					echo '<h1>Error: #'.$this->response['code'].'</h1>';
+				} else if ( substr( get_class($this->response), 0, -2 ) == 'UI' ) {
+					echo $this->response->output();
 				} else {
 					echo $this->response;
 				}

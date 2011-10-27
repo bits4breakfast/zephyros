@@ -10,5 +10,9 @@ class BaseConfig {
 	const BASE_PATH = '';
 	const CACHE_PATH = '';
 	const LOGS_PATH = '';
+	const BUILD_PATH = '';
+	
+	const USE_CACHE_REPLICATION = false;
+	const USE_CLOUD_FILES = false;
 }
 ?>
