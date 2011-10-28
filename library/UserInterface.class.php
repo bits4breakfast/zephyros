@@ -41,7 +41,7 @@ abstract class UserInterface {
 			}
 		}
 		
-		$builtJsFile = $this->build( Config::$folder, 'js', $buildList );
+		$builtJsFile = $this->build( Config::SUBDOMAIN, 'js', $buildList );
 		
 		if ( $builtJsFile == '' ) {
 			foreach ( (array)$javascript as $script ) {
@@ -81,19 +81,21 @@ abstract class UserInterface {
 					if ( BaseConfig::USE_CACHE_REPLICATION ) {
 						HttpReplicationClient::send( BaseConfig::BUILD_PATH.'/'.$fileName );
 					}
-				
-					try {
-						$auth = new CF_Authentication( CloudFilesConfig::USERNAME, CloudFilesConfig::API_KEY );
-						$auth->authenticate();
-						$conn = new CF_Connection($auth);
-						$container = $conn->get_container( CloudFilesConfig::BUILD_CONTAINER );
-						
-						$object = @$container->create_object($fileName);
-						$object->content_type = ($extension == 'js'?'application/x-javascript':'text/css');
-						$object->load_from_filename( BaseConfig::BUILD_PATH.'/'.$fileName );
-						$object->purge_from_cdn();
-					} catch ( Exception $e ) {
-						return '';
+					
+					if ( CloudFilesConfig::USERNAME != '' && CloudFilesConfig::API_KEY != '' ) {
+						try {
+							$auth = new CF_Authentication( CloudFilesConfig::USERNAME, CloudFilesConfig::API_KEY );
+							$auth->authenticate();
+							$conn = new CF_Connection($auth);
+							$container = $conn->get_container( CloudFilesConfig::BUILD_CONTAINER );
+							
+							$object = @$container->create_object($fileName);
+							$object->content_type = ($extension == 'js'?'application/x-javascript':'text/css');
+							$object->load_from_filename( BaseConfig::BUILD_PATH.'/'.$fileName );
+							$object->purge_from_cdn();
+						} catch ( Exception $e ) {
+							return '';
+						}
 					}
 				}
 			}
