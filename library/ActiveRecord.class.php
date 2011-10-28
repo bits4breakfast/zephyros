@@ -147,7 +147,7 @@ abstract class ActiveRecord {
 			}
 			
 			if ( $this->_driver == 'mysql' ) {
-				$query = $this->_db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
+				$query = $this->_db->read('SELECT * FROM '.( $this->_database != '' ? $this->_database : '' ).$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
 				if ( $query != null ) {
 					$record = $query->fetch_object();
 					if ( $record != null ) {
@@ -162,6 +162,7 @@ abstract class ActiveRecord {
 				if ( isset($this->has_one) && !empty($this->has_one) ) {
 					foreach ( $this->has_one as $relation => $details ) {
 						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+						$tableName = ( $this->_database != '' && strpos($tableName,'.') === false ? $this->_database : '' ).$tableName;
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$key = strtolower($relation);
 						
@@ -176,6 +177,7 @@ abstract class ActiveRecord {
 				if ( isset($this->has_many) && !empty($this->has_may) ) {
 					foreach ( $this->has_many as $relation => $details ) {
 						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+						$tableName = ( $this->_database != '' && strpos($tableName,'.') === false ? $this->_database : '' ).$tableName;
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$key = Inflector::plural( strtolower($relation) );
 						
@@ -205,6 +207,7 @@ abstract class ActiveRecord {
 				if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
 					foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
 						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
+						$tableName = ( $this->_database != '' && strpos($tableName,'.') === false ? $this->_database : '' ).$tableName;
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$key = Inflector::plural( strtolower($relation) );
 						$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
@@ -222,7 +225,7 @@ abstract class ActiveRecord {
 				
 				if ( isset($this->is_localized) && $this->is_localized ) {
 					$this->_localized = array();
-					$query = $this->db->query('SELECT * FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
+					$query = $this->db->query('SELECT * FROM '.( $this->_database != '' ? $this->_database : '' ).$this->_plural.'_localized WHERE parent_id = '.$this->id);
 					if ( $query != null ) {
 						while ( $record = $query->fetch_object() ) {
 							$lang = $record->lang;
@@ -266,6 +269,7 @@ abstract class ActiveRecord {
 					foreach ( $this->has_one as $relation => $details ) {
 						if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
 							$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+							$tableName = ( $this->_database != '' && strpos($tableName,'.') === false ? $this->_database : '' ).$tableName;
 							$this->_db->upsert( $tableName, $this->_related[strtolower($relation)] );
 						}
 					}
@@ -275,6 +279,7 @@ abstract class ActiveRecord {
 					foreach ( $this->has_many as $relation => $details ) {
 						if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
 							$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+							$tableName = ( $this->_database != '' && strpos($tableName,'.') === false ? $this->_database : '' ).$tableName;
 							$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 							$key = Inflector::plural( strtolower($relation) );
 							
@@ -287,6 +292,7 @@ abstract class ActiveRecord {
 				if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
 					foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
 						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
+						$tableName = ( $this->_database != '' && strpos($tableName,'.') === false ? $this->_database : '' ).$tableName;
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$key = Inflector::plural( strtolower($relation) );
 						$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
@@ -297,7 +303,7 @@ abstract class ActiveRecord {
 				}
 				
 				if ( isset($this->is_localized) && $this->is_localized ) {
-					$this->db->write('DELETE FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
+					$this->db->write('DELETE FROM '.( $this->_database != '' ? $this->_database : '' ).$this->_plural.'_localized WHERE parent_id = '.$this->id);
 					foreach ( $this->_localized as $lang => $record ) {
 						$record = (array) $record;
 						$record = array_merge( array( 'parent_id' => $this->id, 'lang' => $lang ), $record );
