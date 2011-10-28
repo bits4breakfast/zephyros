@@ -6,6 +6,7 @@ abstract class ActiveRecord {
 	// Object setup
 	protected $_driver = 'mysql';
 	protected $_db = null;
+	protected $_database = '';
 	protected $_class = '';
 	protected $_name = '';
 	protected $_plural = '';
@@ -25,10 +26,11 @@ abstract class ActiveRecord {
 		
 		if ( $this->_driver == 'mysql' ) {
 			$this->_db = Mysql::init();
+		} else if ( $this->_driver == 'mongo' ) {
+			$this->_db = new Mongo();
 		}
 		
 		if ( $id !== NULL ) {
-			
 			if ( is_object($id) ) {
 				foreach ( $id as $key => $value ) {
 					$this->_data[$key] = $value;
@@ -63,10 +65,6 @@ abstract class ActiveRecord {
 		}
 		return null;
 	}
-	
-	public function __toString(){
-        return $this->id;
-    }
 	
 	public function __call( $name, $arguments ) {
 		if ( strpos( $name, 'add_' ) !== false ) {
@@ -140,7 +138,7 @@ abstract class ActiveRecord {
 		$db = Mysql::init();
 	}
 	
-	public function _load() {
+	private function _load() {
 		if ( $this->_isCached() ) {
 			$this->_readCache();
 		} else {
@@ -148,49 +146,69 @@ abstract class ActiveRecord {
 				$this->before_loading();
 			}
 			
-			$query = $this->_db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
-			if ( $query != null ) {
-				$record = $query->fetch_object();
-				if ( $record != null ) {
-					foreach ( $record as $key => $value ) {
-						$this->_data[$key] = $value;
+			if ( $this->_driver == 'mysql' ) {
+				$query = $this->_db->read('SELECT * FROM '.$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
+				if ( $query != null ) {
+					$record = $query->fetch_object();
+					if ( $record != null ) {
+						foreach ( $record as $key => $value ) {
+							$this->_data[$key] = $value;
+						}
+					}
+				} else {
+					throw new Exception( 'Table '.$this->_plural.' does not exist' );
+				}
+				
+				if ( isset($this->has_one) && !empty($this->has_one) ) {
+					foreach ( $this->has_one as $relation => $details ) {
+						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+						$key = strtolower($relation);
+						
+						if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
+							$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_object();
+						} else {
+							$this->_related[$key] = $this->_db->result('SELECT id FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
+						}
 					}
 				}
-			} else {
-				throw new Exception( 'Table '.$this->_plural.' does not exist' );
-			}
-			
-			if ( isset($this->has_one) && !empty($this->has_one) ) {
-				foreach ( $this->has_one as $relation => $details ) {
-					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
-					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
-					$key = strtolower($relation);
-					
-					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
-						$this->_related[$key] = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'" LIMIT 1')->fetch_object();
-					} else {
-						$this->_related[$key] = $this->_db->result('SELECT id FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
-					}
-				}
-			}
-			
-			if ( isset($this->has_many) && !empty($this->has_may) ) {
-				foreach ( $this->has_many as $relation => $details ) {
-					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
-					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
-					$key = Inflector::plural( strtolower($relation) );
-					
-					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
-						$query = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
-						if ( $query != null ) {
-							while ( $record = $query->fetch_object() ) {
-								$this->_related[$key][] = $record;
+				
+				if ( isset($this->has_many) && !empty($this->has_may) ) {
+					foreach ( $this->has_many as $relation => $details ) {
+						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+						$key = Inflector::plural( strtolower($relation) );
+						
+						if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
+							$query = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+							if ( $query != null ) {
+								while ( $record = $query->fetch_object() ) {
+									$this->_related[$key][] = $record;
+								}
+							} else {
+								throw new Exception( 'Table '.$tableName.' does not exist' );
 							}
 						} else {
-							throw new Exception( 'Table '.$tableName.' does not exist' );
+							$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
+							$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+							if ( $query != null ) {
+								while ( list($record) = $query->fetch_object() ) {
+									$this->_related[$key][] = $record;
+								}
+							} else {
+								throw new Exception( 'Table '.$tableName.' does not exist' );
+							}
 						}
-					} else {
+					}
+				}
+				
+				if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
+					foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
+						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
+						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+						$key = Inflector::plural( strtolower($relation) );
 						$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
+						
 						$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
 						if ( $query != null ) {
 							while ( list($record) = $query->fetch_object() ) {
@@ -201,37 +219,25 @@ abstract class ActiveRecord {
 						}
 					}
 				}
-			}
-			
-			if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
-				foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
-					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
-					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
-					$key = Inflector::plural( strtolower($relation) );
-					$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
-					
-					$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+				
+				if ( isset($this->is_localized) && $this->is_localized ) {
+					$this->_localized = array();
+					$query = $this->db->query('SELECT * FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
 					if ( $query != null ) {
-						while ( list($record) = $query->fetch_object() ) {
-							$this->_related[$key][] = $record;
+						while ( $record = $query->fetch_object() ) {
+							$lang = $record->lang;
+							unset( $record->parent_id, $record->lang );
+							$this->_localized[strtolower($lang)] = $record;
 						}
 					} else {
 						throw new Exception( 'Table '.$tableName.' does not exist' );
 					}
 				}
-			}
-			
-			if ( isset($this->is_localized) && $this->is_localized ) {
-				$this->_localized = array();
-				$query = $this->db->query('SELECT * FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
-				if ( $query != null ) {
-					while ( $record = $query->fetch_object() ) {
-						$lang = $record->lang;
-						unset( $record->parent_id, $record->lang );
-						$this->_localized[strtolower($lang)] = $record;
-					}
-				} else {
-					throw new Exception( 'Table '.$tableName.' does not exist' );
+			} else if ( $this->_driver == 'mongo' ) {
+				$record = $this->_db->selectDB( $this->_database )->selectCollection( $this->_plural )->findOne( array( '_id' => new MongoID( $this->id ) ) );
+				if ( $record !== NULL ) {
+					list( $id, $this->_data, $this->_related, $this->_localized ) = $record;
+					$this->_data['id'] = $id;
 				}
 			}
 			
@@ -243,49 +249,68 @@ abstract class ActiveRecord {
 		}
 	}
 	
-	public function save() {
+	final public function save() {
 		if ( !empty($this->_data) ) {
 			if ( method_exists( $this, 'before_saving' ) ) {
 				$this->before_saving();
 			}
 			
-			$this->_db->upsert( $this->_plural, $this->_data );
-						
-			if ( isset($this->has_one) && !empty($this->has_one) ) {
-				foreach ( $this->has_one as $relation => $details ) {
-					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
-						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
-						$this->_db->upsert( $tableName, $this->_related[strtolower($relation)] );
+			if ( $this->_driver == 'mysql' ) {
+				$this->_db->upsert( $this->_plural, $this->_data );
+				
+				if ( !isset($this->_data['id']) ) {
+					$this->_data['id'] = $this->_db->last_id();
+				}
+							
+				if ( isset($this->has_one) && !empty($this->has_one) ) {
+					foreach ( $this->has_one as $relation => $details ) {
+						if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
+							$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+							$this->_db->upsert( $tableName, $this->_related[strtolower($relation)] );
+						}
 					}
 				}
-			}
-			
-			if ( isset($this->has_many) && !empty($this->has_may) ) {
-				foreach ( $this->has_many as $relation => $details ) {
-					if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
-						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+				
+				if ( isset($this->has_many) && !empty($this->has_may) ) {
+					foreach ( $this->has_many as $relation => $details ) {
+						if ( isset($relation['is_dependent']) && $relation['is_dependent'] ) {
+							$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
+							$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
+							$key = Inflector::plural( strtolower($relation) );
+							
+							$this->_db->write('DELETE FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+							$this->_db->upsert( $tableName, $this->_related[strtolower($relation)] );
+						}
+					}
+				}
+				
+				if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
+					foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
+						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$key = Inflector::plural( strtolower($relation) );
+						$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
 						
 						$this->_db->write('DELETE FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
 						$this->_db->upsert( $tableName, $this->_related[strtolower($relation)] );
 					}
 				}
-			}
-			
-			if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
-				foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
-					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
-					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
-					$key = Inflector::plural( strtolower($relation) );
-					$fieldName = ( $details['field_name'] ? $details['field_name'] : strtolower($relation).'_id' );
-					
-					$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+				
+				if ( isset($this->is_localized) && $this->is_localized ) {
+					$this->db->write('DELETE FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
+					foreach ( $this->_localized as $lang => $record ) {
+						$record = (array) $record;
+						$record = array_merge( array( 'parent_id' => $this->id, 'lang' => $lang ), $record );
+						$this->_db->insert( $tableName, $record );
+					}
 				}
-			}
-			
-			if ( isset($this->is_localized) && $this->is_localized ) {
-				$this->db->write('DELETE FROM '.$tableName.'_localized WHERE parent_id = '.$this->id);
+			} else if ( $this->_driver == 'mongo' ) {
+				$collection = $this->_db->selectDB( $this->_database )->selectCollection( $this->_plural );
+				$document = $this->_snapshot();
+				$collection->update( array( '_id' => new MongoID( $this->id ) ), $document, array( 'upsert' => TRUE ) );
+				if ( !isset($this->_data['id']) ) {
+					$this->_data['id'] = $document['_id'];
+				}
 			}
 			
 			if ( method_exists( $this, 'after_saving' ) ) {
@@ -293,16 +318,20 @@ abstract class ActiveRecord {
 			}
 			
 			$this->_clearCache();
+			
+			return $this->id;
 		}
 	}
 	
-	public function delete() {
+	final public function delete() {
 		if ( method_exists( $this, 'before_deleting' ) ) {
 			$this->before_deleting();
 		}
 		
 		if ( $this->_driver == 'mysql' ) {
 			$this->_db->write( 'DELETE FROM '.$this->_plural.' WHERE id = '.$this->id );
+		} else if ( $this->_driver == 'mongo' ) {
+			$this->_db->selectDB( $this->_database )->selectCollection( $this->_plural )->remove( array( '_id' => new MongoID( $this->id ) ) );
 		}
 		
 		if ( method_exists( $this, 'after_deleting' ) ) {
@@ -356,8 +385,20 @@ abstract class ActiveRecord {
 		}
 	}
 	
+	private function _snapshot() {
+		return array(
+			'_data' => $this->_data,
+			'_related' => $this->_related,
+			'_localized' => $this->_localized
+		);
+	}
+	
 	protected function __sleep() {
 		return array( '_data', '_related', '_localized' );
+	}
+	
+	public function __toString() {
+		return $this->_class.' #'.$this->id;
 	}
 }
 ?>
