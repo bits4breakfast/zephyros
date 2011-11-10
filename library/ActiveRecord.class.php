@@ -20,7 +20,7 @@ abstract class ActiveRecord {
 	
 	public function __construct( $id = NULL, $load = true ) {
 		$this->_class = get_class( $this );
-		$this->_name = strtolower( $this->_class );
+		$this->_name = strtolower( Inflector::decamelize( $this->_class ) );
 		$this->_plural = Inflector::plural( $this->_name );
 		$this->_fkName = $this->_name.'_id';
 		
