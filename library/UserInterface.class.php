@@ -111,7 +111,7 @@ abstract class UserInterface {
 		if ( $build ) {
 			return '<script src="'.BaseConfig::BUILD_CDN_CONTAINER_PATH.'/'.$file.'" type="text/javascript"></script>';
 		} else {
-			return '<script src="'.BaseConfig::COOKIELESS_DOMAIN.'/'.(strpos($file,'shared/')!==false?'':Config::$folder.'/js/').$file.'" type="text/javascript"></script>';
+			return '<script src="'.BaseConfig::COOKIELESS_DOMAIN.'/'.(strpos($file,'shared/')!==false?'':Config::SUBDOMAIN.'/js/').$file.'" type="text/javascript"></script>';
 		}
 	}
 	
