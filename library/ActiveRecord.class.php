@@ -4,26 +4,31 @@ include_once BaseConfig::BASE_PATH.'/library/Inflector.class.php';
 abstract class ActiveRecord {
 	
 	// Object setup
-	protected $_driver = 'mysql';
-	protected $_db = null;
-	protected $_database = '';
-	protected $_class = '';
-	protected $_name = '';
-	protected $_plural = '';
-	protected $_fkName = '';
-	protected $_columns = array();
+	private $_driver = 'mysql';
+	private $_db = null;
+	private $_database = '';
+	private $_class = '';
+	private $_name = '';
+	private $_table = '';
+	private $_fkName = '';
+	private $_columns = array();
 	
 	// Data storage
-	protected $_data = array();
-	protected $_related = array();
-	protected $_localized = array();
+	private $_data = array();
+	private $_related = array();
+	private $_localized = array();
 	
 	public function __construct( $id = NULL, $load = true ) {
 		$this->_class = get_class( $this );
 		$this->_name = strtolower( Inflector::decamelize( $this->_class ) );
-		$this->_plural = Inflector::plural( $this->_name );
 		$this->_fkName = $this->_name.'_id';
 		
+		if ( isset($this->table_name) && trim($this->table_name) != '' ) {
+			$this->_table = $this->table_name;
+		} else {
+			$this->_table = Inflector::plural( $this->_name );
+		}
+
 		if ( $this->_driver == 'mysql' ) {
 			$this->_db = Mysql::init();
 		} else if ( $this->_driver == 'mongo' ) {
@@ -147,7 +152,7 @@ abstract class ActiveRecord {
 			}
 			
 			if ( $this->_driver == 'mysql' ) {
-				$query = $this->_db->read('SELECT * FROM '.( isset($this->_database) && $this->_database != '' ? $this->_database : '' ).$this->_plural.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
+				$query = $this->_db->read('SELECT * FROM '.( isset($this->_database) && $this->_database != '' ? $this->_database : '' ).$this->_table.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1');
 				if ( $query != null ) {
 					$record = $query->fetch_object();
 					if ( $record != null ) {
@@ -156,13 +161,13 @@ abstract class ActiveRecord {
 						}
 					}
 				} else {
-					throw new Exception( 'Table '.$this->_plural.' does not exist' );
+					throw new Exception( 'Table '.$this->_table.' does not exist' );
 				}
 				
 				if ( isset($this->has_one) && !empty($this->has_one) ) {
 					foreach ( $this->has_one as $relation => $details ) {
 						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
-						$tableName = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_plural.'_' : '' ).$tableName;
+						$tableName = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$tableName;
 						$tableName = ( isset($this->_database) && $this->_database != '' && strpos($tableName,'.') === false ? $this->_database : '' ).$tableName;
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$key = strtolower($relation);
@@ -178,7 +183,7 @@ abstract class ActiveRecord {
 				if ( isset($this->has_many) && !empty($this->has_may) ) {
 					foreach ( $this->has_many as $relation => $details ) {
 						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::plural( strtolower($relation) ) );
-						$tableName = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_plural.'_' : '' ).$tableName;
+						$tableName = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$tableName;
 						$tableName = ( isset($this->_database) && $this->_database != '' && strpos($tableName,'.') === false ? $this->_database : '' ).$tableName;
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$key = Inflector::plural( strtolower($relation) );
@@ -227,7 +232,7 @@ abstract class ActiveRecord {
 				
 				if ( isset($this->is_localized) && $this->is_localized ) {
 					$this->_localized = array();
-					$query = $this->db->query('SELECT * FROM '.( isset($this->_database) && $this->_database != '' ? $this->_database : '' ).$this->_plural.'_localized WHERE parent_id = '.$this->id);
+					$query = $this->db->query('SELECT * FROM '.( isset($this->_database) && $this->_database != '' ? $this->_database : '' ).$this->_table.'_localized WHERE parent_id = '.$this->id);
 					if ( $query != null ) {
 						while ( $record = $query->fetch_object() ) {
 							$lang = $record->lang;
@@ -239,7 +244,7 @@ abstract class ActiveRecord {
 					}
 				}
 			} else if ( $this->_driver == 'mongo' ) {
-				$record = $this->_db->selectDB( $this->_database )->selectCollection( $this->_plural )->findOne( array( '_id' => new MongoID( $this->id ) ) );
+				$record = $this->_db->selectDB( $this->_database )->selectCollection( $this->_table )->findOne( array( '_id' => new MongoID( $this->id ) ) );
 				if ( $record !== NULL ) {
 					list( $id, $this->_data, $this->_related, $this->_localized ) = $record;
 					$this->_data['id'] = $id;
@@ -250,7 +255,9 @@ abstract class ActiveRecord {
 				$this->after_loading();
 			}
 			
-			$this->_writeCache();
+			if ( !isset($this->do_not_cache) || ( isset($this->do_not_cache) && !$this->do_not_cache ) ) {
+				$this->_writeCache();
+			}
 		}
 	}
 	
@@ -261,9 +268,9 @@ abstract class ActiveRecord {
 			}
 			
 			if ( $this->_driver == 'mysql' ) {
-				$this->_db->upsert( $this->_plural, $this->_data );
+				$this->_db->upsert( $this->_table, $this->_data, (isset($this->columns_to_increment)?$this->columns_to_increment:null) );
 				
-				if ( !isset($this->_data['id']) ) {
+				if ( !isset($this->_data['id']) && ( !isset($this->has_composite_primary_key) || ( isset($this->has_composite_primary_key) && !$this->has_composite_primary_key ) ) ) {
 					$this->_data['id'] = $this->_db->last_id();
 				}
 							
@@ -305,7 +312,7 @@ abstract class ActiveRecord {
 				}
 				
 				if ( isset($this->is_localized) && $this->is_localized ) {
-					$this->db->write('DELETE FROM '.( isset($this->_database) && $this->_database != '' ? $this->_database : '' ).$this->_plural.'_localized WHERE parent_id = '.$this->id);
+					$this->db->write('DELETE FROM '.( isset($this->_database) && $this->_database != '' ? $this->_database : '' ).$this->_table.'_localized WHERE parent_id = '.$this->id);
 					foreach ( $this->_localized as $lang => $record ) {
 						$record = (array) $record;
 						$record = array_merge( array( 'parent_id' => $this->id, 'lang' => $lang ), $record );
@@ -313,7 +320,7 @@ abstract class ActiveRecord {
 					}
 				}
 			} else if ( $this->_driver == 'mongo' ) {
-				$collection = $this->_db->selectDB( $this->_database )->selectCollection( $this->_plural );
+				$collection = $this->_db->selectDB( $this->_database )->selectCollection( $this->_table );
 				$document = $this->_snapshot();
 				$collection->update( array( '_id' => new MongoID( $this->id ) ), $document, array( 'upsert' => TRUE ) );
 				if ( !isset($this->_data['id']) ) {
@@ -325,7 +332,9 @@ abstract class ActiveRecord {
 				$this->after_saving();
 			}
 			
-			$this->_clearCache();
+			if ( !isset($this->do_not_cache) || ( isset($this->do_not_cache) && !$this->do_not_cache ) ) {
+				$this->_clearCache();
+			}
 			
 			return $this->id;
 		}
@@ -337,16 +346,18 @@ abstract class ActiveRecord {
 		}
 		
 		if ( $this->_driver == 'mysql' ) {
-			$this->_db->write( 'DELETE FROM '.( isset($this->_database) && $this->_database != '' ? $this->_database : '' ).$this->_plural.' WHERE id = '.$this->id );
+			$this->_db->write( 'DELETE FROM '.( isset($this->_database) && $this->_database != '' ? $this->_database : '' ).$this->_table.' WHERE id = '.$this->id );
 		} else if ( $this->_driver == 'mongo' ) {
-			$this->_db->selectDB( $this->_database )->selectCollection( $this->_plural )->remove( array( '_id' => new MongoID( $this->id ) ) );
+			$this->_db->selectDB( $this->_database )->selectCollection( $this->_table )->remove( array( '_id' => new MongoID( $this->id ) ) );
 		}
 		
 		if ( method_exists( $this, 'after_deleting' ) ) {
 			$this->after_deleting();
 		}
 		
-		$this->_clearCache();
+		if ( !isset($this->do_not_cache) || ( isset($this->do_not_cache) && !$this->do_not_cache ) ) {
+			$this->_clearCache();
+		}
 	}
 	
 	private function _isCached() {

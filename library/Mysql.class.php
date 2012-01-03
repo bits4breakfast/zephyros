@@ -28,15 +28,23 @@ class Mysql {
 	}
 	
 	private function connectRead() {
-		$readSelection = ( rand() & (count(BaseConfig::$slavesPool)-1) );
-		if ( ($readSelection == 0 && $this->writeHandler == null) || $readSelection != 0 ) {
-			$slaveDelay = ( file_exists( Config::LOGS_PATH."/slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) ? file_get_contents( Config::LOGS_PATH."/slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) : 0 );
-			if ( $readSelection > 0 && ( $slaveDelay == "NULL" || trim($slaveDelay) == "" || $slaveDelay == null || (int) $slaveDelay > 0) ) {
-				$readSelection = 0;
+		if ( isset(BaseConfig::$slavesPool) ) {
+			$readSelection = ( rand() & (count(BaseConfig::$slavesPool)-1) );
+			if ( ($readSelection == 0 && $this->writeHandler == null) || $readSelection != 0 ) {
+				$slaveDelay = ( file_exists( Config::LOGS_PATH."/slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) ? file_get_contents( Config::LOGS_PATH."/slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) : 0 );
+				if ( $readSelection > 0 && ( $slaveDelay == "NULL" || trim($slaveDelay) == "" || $slaveDelay == null || (int) $slaveDelay > 0) ) {
+					$readSelection = 0;
+				}
+				$this->readHandler = new mysqli( BaseConfig::$slavesPool[$readSelection], BaseConfig::DB_USER, BaseConfig::DB_PASSWORD, BaseConfig::DB_DATABASE );
+			} elseif ( $readSelection == 0 && $this->writeHandler != null ) {
+				$this->readHandler = $this->writeHandler;
 			}
-			$this->readHandler = new mysqli( BaseConfig::$slavesPool[$readSelection], BaseConfig::DB_USER, BaseConfig::DB_PASSWORD, BaseConfig::DB_DATABASE );
-		} elseif ( $readSelection == 0 && $this->writeHandler != null ) {
-			$this->readHandler = $this->writeHandler;
+		} else {
+			if ( $this->writeHandler != null ) {
+				$this->readHandler = $this->writeHandler;
+			} else {
+				$this->connectWrite();
+			}
 		}
 	}
 	
