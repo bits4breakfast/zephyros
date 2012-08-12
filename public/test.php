@@ -7,9 +7,9 @@ class BaseConfig {
 	const DB_DATABASE = 'test';
 	static $slavesPool = array('master01','slave01');
 	
-	const LOGS_PATH = '';
 	const BASE_PATH = '/var/www/zephyros/trunk';
-	const LIB = '';
+	const CACHE_PATH = '/cache/zephyros';
+	const LOGS_PATH = '';
 }
 
 class Config extends BaseConfig {
@@ -31,9 +31,12 @@ include Config::BASE_PATH.'/library/ActiveRecord.class.php';
 
 class User extends ActiveRecord {}
 
+/*
 $test = new User();
 $test->name = 'Matteo';
 $test->surname = 'Galli';
 $test->email = 'matt@epoquehotels.com';
-$test->save();
+$id = $test->save();
+*/
+$test = new User( 3 );
 ?>

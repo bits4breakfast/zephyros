@@ -11,6 +11,7 @@ class HttpReplicationClient {
 	}
 	
 	public function __destruct() {
+		return;
 		$files = array();
 		foreach ( self::$filesToSend as $file ) {
 			if ( file_exists($file) ) {
@@ -20,7 +21,7 @@ class HttpReplicationClient {
 	
 		$packetPayLoad = json_encode( array("dirsToRemove" => self::$dirsToRemove, "filesToRemove" => self::$filesToRemove, "filesToSend" => $files) );
 		
-		$hosts = file_get_contents("/var/www/replicationhosts.ini");
+		$hosts = file_get_contents(HOSTS_PATH."/replicationhosts.ini");
 		if (trim($hosts) != '') {
 			$hosts = explode(",",$hosts);
 		} else {
