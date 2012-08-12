@@ -51,8 +51,8 @@ abstract class UserInterface {
 		$this->smarty->assign($key, $value);
 	}
 	
-	final public function addMetaTag($name, $value, $content) {        
-		$this->metaTags[] = array( 'name' => $name, 'value' => $value, 'content' => $content );        
+	final public function metatag($name, $value, $content) {
+		$this->metaTags[] = array( 'name' => $name, 'value' => $value, 'content' => $content );
 	}
 
 	final public function css( $path ) {
