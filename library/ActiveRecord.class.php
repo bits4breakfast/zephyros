@@ -59,11 +59,11 @@ abstract class ActiveRecord {
 	
 	public static function init( $id = NULL ) {
 		$calledClass = get_called_class();
-		if ( !isset($calledClass::$instances[$id]) ) {
-			$calledClass::$instances[$id] = new $calledClass( $id );
+		if ( !isset(self::$instances[$calledClass][$id]) ) {
+			self::$instances[$calledClass][$id] = new $calledClass( $id );
 		}
 		
-		return $calledClass::$instances[$id];
+		return self::$instances[$calledClass][$id];
 	}
 	
 	public function __set( $key, $value ) {
