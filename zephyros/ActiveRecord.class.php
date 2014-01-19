@@ -1,6 +1,9 @@
 <?php
 namespace bits4breakfast\zephyros;
 
+use bits4breakfast\zephyros\Mysql;
+use bits4breakfast\zephyros\Inflector;
+
 abstract class ActiveRecord {
 	
 	// Object setup
@@ -30,7 +33,7 @@ abstract class ActiveRecord {
 		}
 
 		$this->_class = get_class( $this );
-		$this->_name = strtolower( \zephyros\Inflector::decamelize( join('', array_slice(explode('\\', $this->_class), -1)), '_' ) );
+		$this->_name = strtolower( Inflector::decamelize( join('', array_slice(explode('\\', $this->_class), -1)), '_' ) );
 		$this->_fkName = $this->_name.'_id';
 		
 		if ( isset($this->table_name) && trim($this->table_name) != '' ) {
@@ -39,7 +42,7 @@ abstract class ActiveRecord {
 			$this->_table = $this->_name;
 		}
 
-		$this->_db = \zephyros\Mysql::init();
+		$this->_db = Mysql::init();
 		$this->_table = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$this->_table;
 		
 		if ( $id !== NULL ) {
@@ -56,7 +59,7 @@ abstract class ActiveRecord {
 			} else {
 				foreach ( $id as $key => $value ) {
 					if ( $value === now ) {
-						$value = \zephyros\Mysql::utc_timestamp();
+						$value = Mysql::utc_timestamp();
 					}
 					
 					$this->_data[$key] = $value;
@@ -76,7 +79,7 @@ abstract class ActiveRecord {
 	
 	public function __set( $key, $value ) {
 		if ( $value === now ) {
-			$value = \zephyros\Mysql::utc_timestamp();
+			$value = Mysql::utc_timestamp();
 		}
 		
 		if ( is_array($value) || is_object($value) ) {
@@ -105,21 +108,21 @@ abstract class ActiveRecord {
 	public function __call( $name, $arguments ) {
 		if ( strpos( $name, 'add_' ) !== false ) {
 			if ( empty($arguments) ) {
-				throw new \Exception( 'Missing value to add to '.\zephyros\Inflector::plural($name) );
+				throw new \Exception( 'Missing value to add to '.Inflector::plural($name) );
 			}
 			if ( !isset($arguments[1]) ) {
-				$this->add( \zephyros\Inflector::plural( str_replace('add_','',$name) ), $arguments[0] );
+				$this->add( Inflector::plural( str_replace('add_','',$name) ), $arguments[0] );
 			} else {
-				$this->add( \zephyros\Inflector::plural( str_replace('add_','',$name) ), $arguments[0], $arguments[1] );
+				$this->add( Inflector::plural( str_replace('add_','',$name) ), $arguments[0], $arguments[1] );
 			}
 		} else if ( strpos( $name, 'remove_' ) !== false ) {
-			$this->remove( \zephyros\Inflector::plural( str_replace('remove_','',$name) ), $arguments );
+			$this->remove( Inflector::plural( str_replace('remove_','',$name) ), $arguments );
 		} else if ( strpos( $name, 'reset_' ) !== false ) {
 			$this->reset( str_replace('reset_','',$name) );
 		} else if ( strpos( $name, 'has_' ) !== false ) {
 			return $this->has( str_replace('has_','',$name) );
 		} else if ( strpos( $name, 'save_' ) !== false ) {
-			$relation = \zephyros\Inflector::singular( str_replace('save_','',$name) );
+			$relation = Inflector::singular( str_replace('save_','',$name) );
 			$this->save_dependent( $relation, $this->has_many[$relation] );
 		} else if ( strpos( $name, 'replace_in_' ) !== false ) {
 			$this->replace( str_replace('replace_in_','',$name), $arguments );
@@ -199,7 +202,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = \zephyros\Mysql::init();
+		$db = Mysql::init();
 
 		if ( is_string($conditions) ) {
 			$query = $conditions;	
@@ -259,7 +262,7 @@ abstract class ActiveRecord {
 		
 		$result = $db->pick( $temp->_shard )->read( $query );
 		if ( $result === false ) {
-			throw new \zephyros\FindException( $db->read_error(), $db->read_errno() );
+			throw new FindException( $db->read_error(), $db->read_errno() );
 		} else {
 			if ( $result->num_rows == 0 ) {
 				return null;
@@ -284,7 +287,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = \zephyros\Mysql::init();
+		$db = Mysql::init();
 
 		$query = '';
 		foreach ( $conditions as $field => $value ) {
@@ -332,7 +335,7 @@ abstract class ActiveRecord {
 					}
 				} else {
 					if ( $strict ) {
-						throw new \zephyros\NonExistingItemException(sprintf("Record with id %s not found in table '%s'.", $this->_data['id'], $this->_table));
+						throw new NonExistingItemException(sprintf("Record with id %s not found in table '%s'.", $this->_data['id'], $this->_table));
 					}
 				}
 			} else {
@@ -349,7 +352,7 @@ abstract class ActiveRecord {
 					if ( isset($details['table_name']) && !empty($details['table_name']) ) {
 						$table_name = $details['table_name'];
 					} else {
-						$table_name = \zephyros\Inflector::plural(strtolower($relation));
+						$table_name = Inflector::plural(strtolower($relation));
 						$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
 						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 					}
@@ -370,7 +373,7 @@ abstract class ActiveRecord {
 						continue;
 					}
 					
-					$key = \zephyros\Inflector::plural( strtolower($relation) );
+					$key = Inflector::plural( strtolower($relation) );
 					if ( isset($details['table_name']) && !empty($details['table_name']) ) {
 						$table_name = $details['table_name'];
 					} else {
@@ -408,8 +411,8 @@ abstract class ActiveRecord {
 						continue;
 					}
 					
-					$key = \zephyros\Inflector::plural( strtolower($relation) );
-					$table_name = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : \zephyros\Inflector::habtmTableName( $this->_name, $relation ) );
+					$key = Inflector::plural( strtolower($relation) );
+					$table_name = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_name, $relation ) );
 					$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					$field_name = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
@@ -460,7 +463,7 @@ abstract class ActiveRecord {
 			if ( ( !isset($this->_data['id']) || ( isset($this->_data['id']) && $this->_data['id'] == 0 ) ) && ( !isset($this->has_composite_primary_key) || ( isset($this->has_composite_primary_key) && !$this->has_composite_primary_key ) ) ) {
 				$this->_data['id'] = (int) $this->_db->pick($this->_shard)->last_id();
 				if ( $this->_data['id'] == 0 ) {
-					throw new \zephyros\PersistingErrorException();
+					throw new PersistingErrorException();
 				}
 			}
 						
@@ -469,7 +472,7 @@ abstract class ActiveRecord {
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
 						$key = strtolower($relation);
 						if ( isset($this->_related['_changed'][$relation]) || isset($this->_related['_changed'][$key]) ) {
-							$table_name = \zephyros\Inflector::plural(strtolower($relation));
+							$table_name = Inflector::plural(strtolower($relation));
 							$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
 							$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 							
@@ -497,9 +500,9 @@ abstract class ActiveRecord {
 			
 			if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
 				foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
-					$key = \zephyros\Inflector::plural( strtolower($relation) );
+					$key = Inflector::plural( strtolower($relation) );
 					if ( isset($this->_related['_changed'][$relation]) || isset($this->_related['_changed'][$key]) ) {
-						$table_name = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : \zephyros\Inflector::habtmTableName( $this->_name, $relation ) );
+						$table_name = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_name, $relation ) );
 						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$field_name = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
@@ -534,7 +537,7 @@ abstract class ActiveRecord {
 	}
 	
 	final public function save_dependent( $relation, $details = null ) {
-		$key = \zephyros\Inflector::plural( strtolower($relation) );
+		$key = Inflector::plural( strtolower($relation) );
 		
 		if ( isset($this->_related['_changed'][$key]) || isset($this->_related['_changed'][$relation]) ) {
 			if ( isset($details['table_name']) && !empty($details['table_name']) ) {
