@@ -1,12 +1,11 @@
 <?php
-/*
-$Id$
-*/
+namespace bits4breakfast\zephyros;
+
 class RouteParameters {
 	private static $instance = null;
 
 	public $method = "GET";
-	public $controller = "homepage";
+	public $controller = "events";
 	public $action = "__default";
 	public $id = null;
 	public $format = "html";
@@ -17,7 +16,7 @@ class RouteParameters {
 
 	public static function init() {
 		if ( self::$instance == null ) {
-			self::$instance = new RouteParameters();
+			self::$instance = new \zephyros\RouteParameters();
 		}
 		return self::$instance;
 	}
@@ -26,19 +25,24 @@ class RouteParameters {
 
 class Router {
 	private $p = null;
-	private $startTime = 0;
 
 	public function __construct() {
-		$this->startTime = microtime(true);
 		ob_start();
 		session_start();
 
-		$this->p = RouteParameters::init();
+		register_shutdown_function('\zephyros\Cache::commit');
+		register_shutdown_function('\ehbox\core\Cache::commit');
+
+		if ( extension_loaded ('newrelic') ) {
+			newrelic_set_appname( 'Ehbox:'.\Config::SUBDOMAIN );
+		}
+
+		$this->p = \zephyros\RouteParameters::init();
 
 		if (isset($_POST["_method"])) {
 			// POST -> UPDATE ~~~~~ PUT -> INSERT
 			if ($_POST["_method"] != "POST" && $_POST["_method"] != "PUT" && $_POST["_method"] != "DELETE") {
-				$this->__toError(Controller::ERROR_BAD_REQUEST);
+				$this->__toError( \zephyros\Controller::ERROR_BAD_REQUEST );
 			} else {
 				$this->p->method = $_POST["_method"];
 			}
@@ -46,7 +50,7 @@ class Router {
 			$this->p->method = $_SERVER['REQUEST_METHOD'];
 		}
 
-		if (substr($_SERVER['SERVER_NAME'], 0, 2) == 'm.' || substr($_SERVER['SERVER_NAME'], 0, 10) == 'ymptest-m.') {
+		if ( substr($_SERVER['SERVER_NAME'], 0, 2) == 'm.' ) {
 			$this->p->mobile = true;
 		}
 
@@ -55,21 +59,16 @@ class Router {
 			$this->p->action = isset($_GET['action']) ? $_GET['action'] : '';
 			$this->p->id = isset($_GET['id']) ? $_GET['id'] : 0;
 		} else {
-			$uri = substr($_SERVER["REDIRECT_URL"], 1);
+			$uri = substr($_SERVER["REQUEST_URI"], 1);
 			if ( strpos($uri, "?") !== false ) {
 				$uri = explode("?", $uri);
 				$uri = $uri[0];
 			}
 
-			/*if ( substr($uri, 0, 2) == 'm/' ) {
-				$this->p->mobile = true;
-				$uri = substr($uri, 2);
-			}*/
-
 			list($this->p->controller, $this->p->action, $this->p->id) = (array) array_pad(explode("/", $uri), 3, "");
 		}
 
-		foreach ( array('json') as $format ) {
+		foreach ( array('json', 'csv') as $format ) {
 			if ( strpos($this->p->id, ".".$format) !== false ) {
 				$this->p->format = $format;
 				$this->p->id = str_replace(".".$format, "", $this->p->id);
@@ -100,18 +99,8 @@ class Router {
 			$this->p->id = (int) $this->p->id;
 		}
 
-		if ( !isset(Config::$webservice) || ( isset(Config::$webservice) && !Config::$webservice) ) {
-			if ( isset($_SESSION['userId']) ) {
-				$this->p->hasValidSession = true;
-			}
-		} else {
-			if ( $this->p->format == "html" ) {
-				$this->p->format = "json";
-			}
-
-			if ( isset($_GET["sid"]) ) {
-				$this->p->hasValidSession = true;
-			}
+		if ( isset($_SESSION['user_id']) != null ) {
+			$this->p->hasValidSession = true;
 		}
 
 		$this->route();
@@ -119,76 +108,72 @@ class Router {
 
 	public function __toError( $code = 0 ) {
 		$this->p->errorCode = $code;
-		new Controller( $this->p );
+		new \zephyros\Controller( $this->p );
 		exit();
 	}
 
 	public function route() {
-		if ( !isset(Config::$webservice) || ( isset(Config::$webservice) && !Config::$webservice) ) {
+		if ( 
+			isset(\Config::$enforce_ssl) && 
+			\Config::$enforce_ssl && 
+			isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && 
+			$_SERVER['HTTP_X_FORWARDED_PROTO'] != 'https' ) 
+		{
+			header('Location: https://'.$_SERVER['SERVER_NAME'].$_SERVER['REQUEST_URI']);
+		}
 
-			if ($this->p->controller == "") {
-				$this->p->controller = "homepage";
-			}
-
-			if ( !$this->p->hasValidSession && !in_array($this->p->controller, Config::$doesntRequireAuthentication) ) {
+		if ( $this->p->controller == "" ) {
+			$this->p->controller = "homepage";
+		}
+		
+		if ( !isset( \Config::$webservice) || ( isset( \Config::$webservice) && !\Config::$webservice) ) {
+			if ( $this->p->format == 'html' && !file_exists( \Config::BASE_PATH.'/application/controllers/'.\Config::SUBDOMAIN.'/'.Inflector::camelize( $this->p->controller ).'.class.php' ) ) {
+				$this->__toError( \zephyros\Controller::ERROR_NOT_FOUND );
+			} else if ( !$this->p->hasValidSession && !in_array($this->p->controller, \Config::$doesntRequireAuthentication) ) {
 				if ( $this->p->format == 'html' ) {
-					header("Location: /".Config::$doesntRequireAuthentication[0]); // Il primo elemento dell'array viene considerato quello a cui rimandare l'utente nel caso di sessione mancante
+					header("Location: /".\Config::$doesntRequireAuthentication[0]); // Il primo elemento dell'array viene considerato quello a cui rimandare l'utente nel caso di sessione mancante
 				} else {
-					$__c = new Controller( $this->p );
+					$__c = new \zephyros\Controller( $this->p );
 					$__c->response( 'ERROR' );
-					$this->__toError( Controller::ERROR_UNAUTHORIZED );
+					$this->__toError( \zephyros\Controller::ERROR_UNAUTHORIZED );
 				}
 				exit;
 			}
 		} else {
-			if ( !in_array($this->p->controller, Config::$doesntRequireAuthentication) && !$this->p->hasValidSession ) {
-				$this->__toError(Controller::ERROR_UNAUTHORIZED);
+			if ( !in_array($this->p->controller, \Config::$doesntRequireAuthentication) && !$this->p->hasValidSession ) {
+				$this->__toError( \zephyros\Controller::ERROR_UNAUTHORIZED );
 			}
 
 			if ($this->p->controller == "") {
-				$this->__toError(Controller::ERROR_BAD_REQUEST);
+				$this->__toError( \zephyros\Controller::ERROR_BAD_REQUEST );
 			}
 		}
-
-		if ( file_exists(BaseConfig::BASE_PATH.'/application/controllers/'.Config::SUBDOMAIN.'/'.ucfirst($this->p->controller).'Controller.class.php') ) {
-			$className = Config::SUBDOMAIN.'_';
-		} else {
-			$className = '';
-		}
-
-		if ( file_exists(BaseConfig::BASE_PATH.'/application/controllers/base/'.ucfirst($this->p->controller).'Controller.class.php') ) {
-			include BaseConfig::BASE_PATH.'/application/controllers/base/'.ucfirst($this->p->controller).'Controller.class.php';
-		} else if ( $className == '' ) {
-			Logger::log(Logger::ERROR, "Invalid controller: " . $this->p->controller);
-			$this->__toError(Controller::ERROR_NOT_FOUND);
-		}
-
-		if ( $className != '' ) {
-			include BaseConfig::BASE_PATH.'/application/controllers/'.Config::SUBDOMAIN.'/'.ucfirst($this->p->controller).'Controller.class.php';
-		}
-
-		$className .= ucfirst($this->p->controller).'Controller';
+		
+		$className = \Config::NS.'\\controllers\\'.\Config::SUBDOMAIN.'\\'.Inflector::camelize( $this->p->controller );
 		$__c = new $className($this->p);
 		try {
 			$__c->render();
-		} catch (Exception $e) {
-			Logger::logException($e);
-			$this->__toError(Controller::ERROR_UNEXPECTED);
+		} catch ( \Exception $e) {
+			if ( DEV_ENVIRONMENT ) {
+				var_dump( $e );
+			}
+			$this->__toError( \zephyros\Controller::ERROR_UNEXPECTED );
 		}
+
+		$this->track_with_newrelic();
 	}
 
-	public function __destruct() {
-		if ( isset(Config::$donotTrack) && $this->p->action != '' ) {
-			if ( Config::$donotTrack === true || isset(Config::$donotTrack[$this->p->controller][$this->p->action]) ) {
-				return;
-			}
+	private function track_with_newrelic() {
+		if (! extension_loaded ('newrelic') ) {
+			return;
 		}
-		$execTime = microtime(true)-$this->startTime;
-		$memory = memory_get_peak_usage();
-		$fp = fopen(Config::LOGS_PATH."/usage/".Config::SUBDOMAIN."_".@date("Y-m-d").".log", 'a');
-		fputcsv($fp, array(@date("Y-m-d H:i:s"), $this->p->controller, $this->p->action, $this->p->id, $execTime, $memory));
-		fclose($fp);
+
+		$controller = !empty($this->p->controller) ? $this->p->controller : 'undefined';
+		$action = !empty($this->p->action) ? $this->p->action : 'default';
+
+		newrelic_name_transaction( $controller."/".$action." (" . $this->p->method . ")" );
 	}
 }
+
 $__r = new Router();
 ?>

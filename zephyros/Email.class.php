@@ -1,32 +1,31 @@
 <?php
-include_once 'PHPMailer.class.php';
-include_once 'SMTP.class.php';
+namespace bits4breakfast\zephyros;
 
-class Email extends PHPMailer {
+class Email extends \vendor\PHPMailer {
 
 	public function __construct($senderAddress = null, $senderName = null) {
 		parent::__construct(true);
 
 		if ( $senderAddress == null ) {
-			$senderAddress = Config::MAIL_SENDER_ADDRESS;
+			$senderAddress = \Config::MAIL_SENDER_ADDRESS;
 		}
 
 		if ($senderName == null) {
-			$senderName = Config::MAIL_SENDER_NAME;
+			$senderName = \Config::MAIL_SENDER_NAME;
 		}
 
-		$this->from( array( 'email' => $senderAddress, 'name' => $senderName) );
+		$this->from([ 'email' => $senderAddress, 'name' => $senderName ]);
 
 		if ( DEV_ENVIRONMENT ) {
 			$this->IsMail();
 		} else {
 			$this->setSMTP(
-				Config::SMTP_AUTH,
-				Config::SMTP_HOST,
-				Config::SMTP_USER,
-				Config::SMTP_PASSWORD,
-				Config::SMTP_SECURE,
-				Config::SMTP_PORT);
+				\Config::SMTP_AUTH,
+				\Config::SMTP_HOST,
+				\Config::SMTP_USER,
+				\Config::SMTP_PASSWORD,
+				\Config::SMTP_SECURE,
+				\Config::SMTP_PORT);
 		}
 	}
 

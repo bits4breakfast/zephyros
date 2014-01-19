@@ -1,64 +1,69 @@
 <?php
+namespace bits4breakfast\zephyros;
+
 class LanguageManager {
 
-	private static $singletonInstances = array();	///< Array of LanguageManager Resources. Singleton instance pointers
+	private static $instances = [];
 
 	protected $db = null;
-	protected $language = 'EN';
+	
+	protected $lang = 'EN';
+	protected $cache = [];
 	
 	
 	public function __construct( $lang = 'EN' ) {
-		$this->db = Mysql::init();
-		$this->language = strtoupper( $lang );
+		$this->db = \zephyros\Mysql::init();
+		
+		$this->lang = strtoupper($lang);
 	}
 	
 	public static function init( $lang = 'EN' ) {
-		if( !isset(self::$singletonInstances[$lang]) )
-			self::$singletonInstances[$lang] = new LanguageManager( $lang );
 		
-		return self::$singletonInstances[$lang];
+		if( !isset(self::$instances[$lang]) )
+			self::$instances[$lang] = new \zephyros\LanguageManager($lang);
+		
+		return self::$instances[$lang];
 	}
 	
 	public function setLanguage( $lang ) {
-		$this->language = strtoupper( $lang );
-	}
-	
-	public function language() {
-		return $this->language;
+		$this->lang = strtoupper($lang);
 	}
 	
 	public function __get( $key ) {
-		if ( $key == 'language' ) {
-			return $this->language;
-		} else {
-			return $this->get( $key );
-		}
+		return $this->$key;
 	}
 	
 	public function get($code, $search = null, $replace = null) {
+		if ( isset($_GET['_do_not_translate']) ) {
+			return $code;
+		}
 		
-		$dir = '/cache/constants/';
-		
-		# if is cached in current language
-		if( is_file($dir.$this->language.'/'.$code) ) {
-			$text = file_get_contents($dir.$this->language.'/'.$code);
+		if ( isset($this->cache[$code]) ) {
+			$text = $this->cache[$code];
 		} else {
-			# if exists in current language, load and cache
-			$text = $this->db->result("SELECT IF(COUNT(*),text,'') FROM locale.translations LEFT JOIN locale.languages ON language_id=languages.id LEFT JOIN locale.constants ON constant_id=constants.id WHERE constant='$code' AND language='$this->language'");
-			
-			if ( $text != '' ) {
-				file_put_contents($dir.$this->language.'/'.$code, $text);
-			} else if ( is_file($dir.'EN/'.$code) ) {
-				$text = file_get_contents($dir.'EN/'.$code);
-			} else {
-				$text = $this->db->result("SELECT IF(COUNT(*),text,'') FROM locale.translations LEFT JOIN locale.languages ON language_id=languages.id LEFT JOIN locale.constants ON constant_id=constants.id WHERE constant='$code' AND language='EN'");
+			$text = apc_fetch( 'lm:'.$this->lang.':'.$code );
+			if ( false === $text ) {
+				$text = $this->db->pick('setup')->result("SELECT IF(COUNT(*),text,'') FROM constants_translations LEFT JOIN constants ON constant_id=constants.id WHERE code='".$code."' AND lang='".$this->lang."'");
 				
-				if ( $text != '' ) {
-					file_put_contents($dir.'EN/'.$code, $text);
+				if ( trim($text) != '' ) {
+					apc_store( 'lm:'.$this->lang.':'.$code, $text );
 				} else {
-					$text = $code;
+					$text = apc_fetch( 'lm:EN:'.$code );
+					if ( false === $text ) {
+						$text = $this->db->pick('setup')->result("SELECT IF(COUNT(*),text,'') FROM constants_translations LEFT JOIN constants ON constant_id=constants.id WHERE code='".$code."' AND lang='EN'");
+						
+						if ( trim($text) != '' ) {
+							apc_store( 'lm:'.$this->lang.':'.$code, $text );
+						} else {
+							$text = $code;
+						}
+					} else {
+						apc_store( 'lm:'.$this->lang.':'.$code, $text );
+					}
 				}
 			}
+			
+			$this->cache[$code] = $text;
 		}
 		
 		if ( $search != null && $replace != null ) {
@@ -66,10 +71,6 @@ class LanguageManager {
 		}
 		
 		return $text;
-	}
-	
-	public function js ( $string ) {
-		return str_replace(array("\n", "\r"), '', str_replace("'","\'", $this->get($string)));
 	}
 }
 

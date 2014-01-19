@@ -1,11 +1,11 @@
 <?php
-/*
-$Id$
-*/
+namespace zephyros;
+
 class Controller {
 	protected $db = null;
 	protected $p = null;
 	protected $user = null;
+	protected $l = null;
 	protected $response = null;
 
 	const ERROR_BAD_REQUEST = 400;
@@ -18,24 +18,10 @@ class Controller {
 	public function __construct( RouteParameters $parameters ) {
 		$this->p = $parameters;
 
-		$this->db = Mysql::init();
-
 		if ( $parameters->hasValidSession ) {
-			$class = ( isset(Config::$logged_user_class) ? Config::$logged_user_class : 'User' );
-			$this->user = $class::init( $_SESSION['userId'] );
+			$user_class = '\\'.\Config::NS.'\\model\\'.\Config::LOGGED_USER_CLASS;
+			$this->user = $user_class::init( $_SESSION['user_id'] );
 		}
-
-		$lang = "IT";
-		if ( isset($_GET["lang"]) ) {
-			$lang = $this->db->escape(strtoupper($_GET["lang"]));
-			$_SESSION["_lang"] = $lang;
-		} else if ( isset($_SESSION["_lang"]) ) {
-			$lang = $this->db->escape(strtoupper($_SESSION["_lang"]));
-		} else if ( isset($_POST["lang"]) ) {
-			$lang = $this->db->escape(strtoupper($_POST["lang"]));
-			$_SESSION["_lang"] = $lang;
-		}
-		$this->l = new LanguageManager($lang);
 
 		if ( $this->p->format == 'json' ) {
 			header("Content-type: text/json");
@@ -44,31 +30,46 @@ class Controller {
 		if ( $this->p->errorCode > 0 ) {
 			$this->__toError( $this->p->errorCode );
 		}
+		
+		$lang = ( isset($_GET['lang']) && trim($_GET['lang']) != '' && strlen($_GET['lang']) == 2 ? $_GET['lang'] : 'en' );
+		
+		if ( isset(\Config::$allowed_languages) && !in_array($lang, \Config::$allowed_languages)) {
+			$this->l = new \zephyros\LanguageManager( 'en' );
+		} else {
+			$this->l = new \ehbox\core\LanguageManager( $lang );
+		}
 	}
 
 	public function render() {
 		try {
-			$classMethods = get_class_methods($this);
-			if ( in_array($this->p->action, $classMethods ) ) {
+			$class_methods = get_class_methods($this);
+			if ( in_array($this->p->action, $class_methods ) ) {
+				$this->db = Mysql::init();
 				$method = $this->p->action;
 				$this->$method();
-			} else if ( in_array("__default", $classMethods) ) {
+			} else if ( in_array("__default", $class_methods) ) {
 				$this->__default();
 			} else {
-				$this->__toError(Controller::ERROR_UNEXPECTED);
+				$this->__toError( self::ERROR_NOT_FOUND );
 			}
-		} catch ( UserNotLoggedException $e ) {
-			Logger::logException($e);
-			$this->__toError( Controller::ERROR_UNAUTHORIZED );
-		} catch ( SecurityException $e ) {
-			Logger::logException($e);
-			$this->__toError( Controller::ERROR_FORBIDDEN );
-		} catch ( NonExistingItemException $e ) {
-			Logger::logException($e);
-			$this->__toError(Controller::ERROR_NOT_FOUND);
-		} catch ( Exception $e ) {
-			Logger::logException($e);
-			$this->__toError(Controller::ERROR_UNEXPECTED);
+		} catch ( \zephyros\UserNotLoggedException $e ) {
+			$this->__toError( self::ERROR_UNAUTHORIZED );
+		} catch ( \zephyros\SecurityException $e ) {
+			$this->db->general_rollback();
+			$this->__toError( self::ERROR_FORBIDDEN );
+		} catch ( \zephyros\NonExistingItemException $e ) {
+			$this->db->general_rollback();
+			$this->__toError( self::ERROR_NOT_FOUND );
+		} catch( \zephyros\InvalidRequestException $e ) {
+			$this->db->general_rollback();
+			$this->__toError( self::ERROR_BAD_REQUEST );
+			$this->response( 'ERROR', $e->getMessage() );
+		} catch ( \zephyros\BusinessLogicErrorException $e ) {
+			$this->db->general_rollback();
+			$this->response( 'ERROR', $e->getMessage() );
+		} catch ( \Exception $e ) {
+			$this->db->general_rollback();
+			$this->__toError( self::ERROR_UNEXPECTED );
 		}
 	}
 
@@ -88,7 +89,7 @@ class Controller {
 				$this->p->method = 'save';
 				$this->save();
 			} else {
-				$this->__toError(Controller::ERROR_UNEXPECTED);
+				$this->__toError( self::ERROR_NOT_FOUND );
 			}
 		} else {
 			if ( $this->p->method == "GET" && in_array("retrieve", $classMethods) ) {
@@ -101,37 +102,40 @@ class Controller {
 				$this->p->method = 'save';
 				$this->save();
 			} else {
-				$this->__toError(Controller::ERROR_UNEXPECTED);
+				$this->__toError( self::ERROR_NOT_FOUND );
 			}
 		}
 	}
 
-	protected function __toError( $errorCode = 0 ) {
+	protected function __toError( $error_code = 0 ) {
+		switch ( $error_code ) {
+		default:
+		case self::ERROR_BAD_REQUEST:
+			header('HTTP/1.0 400 Bad Request');
+			break;
+		case self::ERROR_UNAUTHORIZED:
+			header('HTTP/1.0 401 Unauthorized');
+			break;
+		case self::ERROR_NOT_FOUND:
+			header('HTTP/1.0 404 Not Found');
+			break;
+		case self::ERROR_UNEXPECTED:
+			header('HTTP/1.0 500 Internal Server Error');
+			break;
+		case self::ERROR_UNEXPECTED:
+			header('HTTP/1.0 501 Not Implemented');
+			break;
+		}
+			
 		if ( $this->p->format == 'html' ) {
-			$errUiPath = BaseConfig::BASE_PATH.'/application/interfaces/'.Config::SUBDOMAIN.'/ErrorsUI.class.php';
-			if ( file_exists($errUiPath) ) {
-				include $errUiPath;
-				$this->response = new ErrorsUI( $errorCode, $this->user );
+			$error_ui_path = \BaseConfig::BASE_PATH.'/application/ui/'.\Config::SUBDOMAIN.'/Errors.class.php';
+			if ( file_exists($error_ui_path) ) {
+				include $error_ui_path;
+				$fully_qualified_name = '\\'.\Config::NS.'\\ui\\'.\Config::SUBDOMAIN.'\\Errors';
+				$this->response = new $fully_qualified_name();
+				$this->response->error_code = $error_code;
 			}
 		} else {
-			switch ( $errorCode ) {
-			default:
-			case Controller::ERROR_BAD_REQUEST:
-				header('HTTP/1.0 400 Bad Request');
-				break;
-			case Controller::ERROR_UNAUTHORIZED:
-				header('HTTP/1.0 401 Unauthorized');
-				break;
-			case Controller::ERROR_NOT_FOUND:
-				header('HTTP/1.0 404 Not Found');
-				break;
-			case Controller::ERROR_UNEXPECTED:
-				header('HTTP/1.0 500 Internal Server Error');
-				break;
-			case Controller::ERROR_UNEXPECTED:
-				header('HTTP/1.0 501 Not Implemented');
-				break;
-			}
 			$this->response( 'ERROR' );
 		}
 	}
@@ -146,7 +150,6 @@ class Controller {
 
 	final public function redirect_to( $controller = null, $action = null, $id = null, $parameters = null ) {
 		$path = '/';
-		
 		if ( !empty($controller) ) {
 			$path .= $controller;
 			if ( !empty($action) ) {
@@ -165,27 +168,25 @@ class Controller {
 
 	public function logout() {
 		$this->user = null;
-		unset($_SESSION['userId']);
-		$this->p->hasValidSession = false;
+		unset( $_SESSION['user_id'] );
 	}
 
 	public function __destruct() {
-		$this->preventCaching();
 		if ( $this->p->format == 'json' ) {
-			if ( $this->response === null ) {
+			if ( $this->response == null ) {
 				$this->response();
 			}
 			try {
 				echo json_encode($this->response);
-			} catch(Exception $e) {
-				Logger::logException($e);
+			} catch( \Exception $e ) {
+				Logger::log_exception($e);
 			}
 		} else if ( $this->response !== null ) {
 			if ( is_string($this->response) ) {
 				echo $this->response;
-			} else if ( is_object($this->response) && substr( get_class($this->response), -2 ) == 'UI' ) {
-				$this->response->setLanguageManager( $this->l );
+			} else if ( $this->response instanceof UserInterface ) {
 				$this->response->setRoute( $this->p );
+				$this->response->setLanguageManager( $this->l );
 				$this->response->setUser( $this->user );
 				echo $this->response->output();
 			} else if ( is_array($this->response) && !empty($this->response['code'])) {
@@ -194,16 +195,48 @@ class Controller {
 		}
 	}
 
-	public function response($code = 'ACK', $message = null, $payload = null) {
-		$this->response = array(
+	public function response( $code = 'ACK', $payload = null ) {
+		$this->response = [
 			'success' => ( $code == 'ACK' ),
-			'errorCode' => $code,
-			'errorMessage' => $message,
+			'code' => $code,
 			'payload' => $payload
-		);
+		];
+	}
+
+	public function attach_csv( $titles = [], $feed = [] ) {
+		header("Content-type: text/csv");
+		header('Content-Disposition: attachment; filename="'.$this->p->controller.'-'.( $this->p->action != '' ? $this->p->action.'-' : '' ).@date("YmdHis").'.csv"');
+
+		if ( is_array($feed) && isset($feed[0]) ) {
+			$output = fopen("php://output", 'w');
+			fputcsv( $output, $titles );
+			
+			foreach ( $feed as $line ) {
+				$temp = [];
+				foreach ( (array)$line as $value ) {
+					if ( is_array($value) ) {
+						$tempArray = [];
+						foreach ( $value as $key => $details ) {
+							if ( is_scalar($details) ) {
+								$tempArray[] = $details;
+							} else {
+								$tempArray[] = implode( ': ', array_values($details) );
+							}
+						}
+						$temp[] = implode( '; ', array_values($tempArray) );
+						unset( $tempArray );
+					} else {
+						$temp[] = $value;
+					}
+				}
+				fputcsv( $output, array_values($temp) );
+			}
+			fclose( $output );
+		}
 	}
 }
-class UserNotLoggedException extends Exception {}
-class SecurityException extends Exception {}
-class InvalidActivationTokenException extends Exception {}
+class UserNotLoggedException extends \Exception {}
+class SecurityException extends \Exception {}
+class InvalidRequestException extends \Exception {}
+class BusinessLogicErrorException extends \Exception {}
 ?>

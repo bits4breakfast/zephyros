@@ -1,10 +1,12 @@
 <?php
+namespace bits4breakfast\zephyros;
+
 class Inflector {
 
-	private static $cache = array();
-	private static $singulars = array();
+	private static $cache = [];
+	private static $singulars = [];
 
-	public static function plural( $singular ) {
+	public static function plural( $singular ) { 
 		$s = trim( $singular );
 
 		$isUppercase = ctype_upper($s);
@@ -12,17 +14,13 @@ class Inflector {
 		if ( isset(Inflector::$cache['plural_'.$s]) ) {
 			return Inflector::$cache['plural_'.$s];
 		}
-		
-		if ( isset(Config::$uncountable) && isset(Config::$uncountable[$s]) ) {
-			;
+
+		if ( substr($s,-1) == 'y' ) {
+			$s = substr($s,0,-1).'ies';	
+		} else if ( substr($s,-2) == 'sh' || substr($s,-2) == 'ch' || substr($s,-1) == 's' || substr($s,-1) == 'x' || substr($s,-1) == 'z' ) {
+			$s .= 'es';	
 		} else {
-			if ( substr($s, -1) == 'y' ) {
-				$s = substr($s, 0, -1).'ies';
-			} else if ( substr($s, -2) == 'sh' || substr($s, -2) == 'ch' || substr($s, -1) == 's' || substr($s, -1) == 'x' || substr($s, -1) == 'z' ) {
-				$s .= 'es';
-			} else {
-				$s .= 's';
-			}
+			$s .= 's';
 		}
 
 		// Convert to uppercase if nessasary
@@ -44,17 +42,17 @@ class Inflector {
 		return preg_replace( '/\s+/', '_', trim($s) );
 	}
 
-	public static function habtmTableName( $first, $second ) {
-		$tableName = array( Inflector::plural( strtolower( $first ) ), Inflector::plural( strtolower($second) ) );
+	public static function habtmTableName ( $first, $second ) {
+		$tableName = [ Inflector::plural( strtolower( $first ) ), Inflector::plural( strtolower($second) ) ];
 		sort( $tableName );
 		return implode( '_', $tableName );
 	}
 
 	public static function camelize( $string, $firstLetterUppercase = true ) {
-		$string = ($firstLetterUppercase?'':'x').strtolower(trim($string));
+		$string = ( $firstLetterUppercase ? '' : 'x' ).strtolower(trim($string));
 		$string = ucwords(preg_replace('/[\s_]+/', ' ', $string));
 
-		return substr(str_replace(' ', '', $string), 1);
+		return substr(str_replace(' ', '', $string), 0);
 	}
 
 	public static function decamelize( $string, $separator = ' ') {

@@ -1,32 +1,40 @@
 <?php
-define('first', 0);
-define('all', 1);
-define('last', 2);
-define('notnull', 'ActiveRecord_notnull');
-define('isnull', 'ActiveRecord_isnull');
-define('now','ActiveRecord_now');
-define('current_date','ActiveRecord_current_date');
+namespace bits4breakfast\zephyros;
+
+if ( !defined("first") ) {
+	define('first', 0);
+	define('all', 1);
+	define('last', 2);
+	define('random', 3);
+	define('notnull', 'zephyros_ActiveRecord_notnull');
+	define('isnull', 'zephyros_ActiveRecord_isnull');
+	define('now', 'zephyros_ActiveRecord_now');
+	define('current_date', 'zephyros_ActiveRecord_current_date');
+}
 
 class Mysql {
 
 	private static $instances = array();
 	private static $now = null;
 
-	private $writeHandler = null;
-	private $readHandler = null;
-	
+	private $connections = array();
+
+	private $use_shard = '';
+
 	private $cache = array();
-	private $hits = 0;
 
 	public function __construct() {
-		$this->connectWrite();
+		$shards = array_keys(\Config::$shards);
+		$this->use_shard = $shards[0];
+
+		$this->connect('read');
 	}
 
 	public static function init() {
-		$hash = md5( getmypid() . BaseConfig::DB_USER . BaseConfig::DB_PASSWORD . BaseConfig::DB_DATABASE );
+		$hash = md5( getmypid() . \Config::DB_USER . \Config::DB_PASSWORD . \Config::DB_DATABASE );
 
 		if ( !isset(self::$instances[$hash]) )
-			self::$instances[$hash] = new Mysql();
+			self::$instances[$hash] = new \zephyros\Mysql();
 
 		return self::$instances[$hash];
 	}
@@ -35,99 +43,111 @@ class Mysql {
 		self::$instances = array();
 	}
 
-	private function connectWrite() {
-		$this->writeHandler = new mysqli( BaseConfig::DB_MASTER_HOST, BaseConfig::DB_USER, BaseConfig::DB_PASSWORD, BaseConfig::DB_DATABASE );
-		$this->writeHandler->set_charset("utf8");
+	public function pick( $shard ) {
+		$this->use_shard = $shard;
+		return $this;
 	}
 
-	private function connectRead() {
-		if ( isset(BaseConfig::$slavesPool) ) {
-			$readSelection = ( rand() & (count(BaseConfig::$slavesPool)-1) );
-			if ( ($readSelection == 0 && $this->writeHandler == null) || $readSelection != 0 ) {
-				$slaveDelay = ( file_exists( Config::LOGS_PATH.'/'."slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) ? file_get_contents( Config::LOGS_PATH.'/'."slaveStatus_".BaseConfig::$slavesPool[$readSelection].".log" ) : 0 );
-				if ( $readSelection > 0 && ( $slaveDelay == "NULL" || trim($slaveDelay) == "" || $slaveDelay == null || (int) $slaveDelay > 0) ) {
-					$readSelection = 0;
-				}
-				$this->readHandler = new mysqli( BaseConfig::$slavesPool[$readSelection], BaseConfig::DB_USER, BaseConfig::DB_PASSWORD, BaseConfig::DB_DATABASE );
-				$this->readHandler->set_charset("utf8");
-			} elseif ( $readSelection == 0 && $this->writeHandler != null ) {
-				$this->readHandler = $this->writeHandler;
-			}
-		} else {
-			if ( $this->writeHandler != null ) {
-				$this->readHandler = $this->writeHandler;
-			} else {
-				$this->connectWrite();
-				$this->readHandler = $this->writeHandler;
-			}
+	public function ensure_connection( $read_or_write = 'write' ) {
+		if ( !isset($this->connections[$this->use_shard][$read_or_write]) ) {
+			$this->connect( $read_or_write );
 		}
+		return $this;
+	}
+
+	public function connect( $read_or_write ) {
+		$host = \Config::$shards[$this->use_shard]['master'];
+		
+		if ( $read_or_write == 'read' && isset(\Config::$shards[$this->use_shard]['replicas']) && !empty(\Config::$shards[$this->use_shard]['replicas']) ) {
+			shuffle( \Config::$shards[$this->use_shard]['replicas'] );
+			$replicas = array_merge( array( $host ), \Config::$shards[$this->use_shard]['replicas'] );
+			$host = $replicas[rand(0,count($replicas)-1)];
+		}
+
+		$database = ( isset(\Config::$shards[$this->use_shard]['database']) ? \Config::$shards[$this->use_shard]['database'] : \Config::DB_DATABASE );
+		
+		$this->connections[$this->use_shard][$read_or_write] = new \mysqli( $host, \Config::DB_USER, \Config::DB_PASSWORD, $database );
+		$this->connections[$this->use_shard][$read_or_write]->set_charset( 'utf8' );
 	}
 
 	public function read( $query, $forceMaster = false ) {
+		$timeStart = microtime();
 		if ( $forceMaster ) {
-			return $this->write( $query );
+			if ( !isset($this->connections[$this->use_shard]['write']) ) {
+				$this->connect( 'write' );
+			}
+
+			$handler = $this->connections[$this->use_shard]['write'];
 		} else {
-			# if not connected
-			if ( $this->readHandler == null ) {
-				$this->connectRead();
+			if ( !isset($this->connections[$this->use_shard]['read']) ) {
+				$this->connect( 'read' );
 			}
 
-			$timeStart = microtime( true );
-			$result = $this->readHandler->query($query);
-			$timeEnd = microtime( true );
-
-			if ( $result === false ) {
-				Logger::logException(
-					new Exception(
-						sprintf( 'Database error n° %s: %s.',$this->writeHandler->errno, $this->writeHandler->error. " SQL=$query" )
-					)
-				);
-			} else {
-				Logger::logQuery( round(($timeEnd - $timeStart) * 1000, 0), $query );
-			}
-
-			return $result;
+			$handler = $this->connections[$this->use_shard]['read'];
 		}
-	}
 
-	public function write( $query ) {
-		$timeStart = microtime( true );
-		$result = $this->writeHandler->query( $query );
-		$timeEnd = microtime( true );
+		$result = $handler->query($query);
+		$timeEnd = microtime();
 
 		if ( $result === false ) {
-			Logger::logException(
-				new Exception(
-					sprintf( 'Database error n° %s: %s.',$this->writeHandler->errno, $this->writeHandler->error. " SQL=$query" )
+			\zephyros\Logger::logException(
+				new \Exception(
+					sprintf( 'Database error n° %s: %s.', $handler->errno, $handler->error. " SQL=$query" )
 				)
 			);
 		} else {
-			Logger::logQuery( round(($timeEnd - $timeStart) * 1000, 0), $query );
+			\zephyros\Logger::logQuery( round(($timeEnd - $timeStart) * 1000, 0), $query );
+		}
+
+		return $result;
+	}
+
+	public function write( $query ) {
+		if ( !isset($this->connections[$this->use_shard]['write']) ) {
+			$this->connect( 'write' );
+		}
+
+		$timeStart = microtime( true );
+		$result = $this->connections[$this->use_shard]['write']->query( $query );
+		$timeEnd = microtime( true );
+
+		if ( $result === false ) {
+			\zephyros\Logger::logException(
+				new \Exception(
+					sprintf( 'Database error n° %s: %s.', $this->connections[$this->use_shard]['write']->errno, $this->connections[$this->use_shard]['write']->error. " SQL=$query" )
+				)
+			);
+		} else {
+			\zephyros\Logger::logQuery( round(($timeEnd - $timeStart) * 1000, 0), $query );
 		}
 
 		return $result;
 	}
 
 	public function upsert( $table, $data, $incrementColumns = null ) {
+		if ( !isset($this->connections[$this->use_shard]['write']) ) {
+			$this->connect( 'write' );
+		}
+		
 		$fields = '';
 		$values = '';
 		$update = '';
-		foreach ( $data as $key => $value ) {
+		foreach ( (array)$data as $key => $value ) {
 			$fields .= '`'.$key.'`,';
 			if ( $value === now || $value === current_date ) {
-				$values .= "'" . self::nowAsUTC() . "',";
-			} else if ( $value === null || $value == isnull ) {
+				$values .= "'" . self::utc_timestamp() . "',";
+			} else if ( $value === null ) {
 				$values .= 'NULL,';
 			} else {
 				$values .= '"'.$this->escape($value).'",';
 			}
-			
+
 			if ( isset($incrementColumns[$key]) ) {
 				$update .= '`'.$key.'` = `'.$key.'` + '.((float)$value).',';
-			} else if ( $value === null || $value == isnull ) {
+			} else if ( $value === null ) {
 				$update .= '`'.$key.'` = NULL,';
 			} else if ( $value === now|| $value === current_date ) {
-				$update .= '`'.$key."` = '" . self::nowAsUTC() . "',";
+				$update .= '`'.$key."` = '" . self::utc_timestamp() . "',";
 			} else {
 				$update .= '`'.$key.'` = "'.$this->escape($value).'",';
 			}
@@ -140,6 +160,10 @@ class Mysql {
 	}
 
 	public function insert( $table, $data ) {
+		if ( !isset($this->connections[$this->use_shard]['write']) ) {
+			$this->connect( 'write' );
+		}
+
 		$fields = '';
 		$values = '';
 		foreach ( $data as $key => $value ) {
@@ -149,7 +173,7 @@ class Mysql {
 				$fields = false;
 			}
 			if ( $value === now || $value === current_date ) {
-				$values .= '"'.self::nowAsUTC().'",';
+				$values .= '"'.self::utc_timestamp().'",';
 			} else {
 				$values .= '"'.$this->escape($value).'",';
 			}
@@ -163,11 +187,15 @@ class Mysql {
 	}
 
 	public function update( $table, $data, $fields, $limit = 1 ) {
+		if ( !isset($this->connections[$this->use_shard]['write']) ) {
+			$this->connect( 'write' );
+		}
+
 		$query = 'UPDATE '.$table.' SET';
 
 		foreach ( $data as $key => $value ) {
 			if ( $value === now || $value === current_date ) {
-				$update .= '`'.$this->escape($key).'` = "'.self::nowAsUTC().'",';
+				$update .= '`'.$this->escape($key).'` = "'.self::utc_timestamp().'",';
 			} else {
 				$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'",';
 			}
@@ -178,9 +206,9 @@ class Mysql {
 		if ( is_array($fields) ) {
 			foreach ( $fields as $key => $value ) {
 				if ( $value === now ) {
-					$query .= ' `'.$this->escape($key).'` = "'.self::nowAsUTC().'" AND';	
+					$query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
 				} else if ( $value === current_date ) {
-					$query .= ' `'.$this->escape($key).'` = DATE("'.self::nowAsUTC().'") AND';	
+					$query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
 				} else {
 					$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
 				}
@@ -189,23 +217,27 @@ class Mysql {
 		} else {
 			$query .= ' '.$fields;
 		}
-		
+
 		if ( $limit > 0 ) {
 			$query .= ' LIMIT '.$limit;
 		}
-		
+
 		return $this->write($query);
 	}
 
 	public function delete( $table, $fields ) {
+		if ( !isset($this->connections[$this->use_shard]['write']) ) {
+			$this->connect( 'write' );
+		}
+
 		$query = 'DELETE FROM '.$table.' WHERE';
 		if ( is_array($fields) ) {
 			foreach ( $fields as $key => $value ) {
 				if ( $value === now ) {
-					$query .= ' `'.$this->escape($key).'` = "'.self::nowAsUTC().'" AND';	
+					$query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
 				} else if ( $value === current_date ) {
-					$query .= ' `'.$this->escape($key).'` = DATE("'.self::nowAsUTC().'") AND';	
-				}  else {
+					$query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
+				} else {
 					$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
 				}
 			}
@@ -215,15 +247,19 @@ class Mysql {
 		}
 		return $this->write($query);
 	}
-	
+
 	public function select( $table, $restrictions, $limit = 1 ) {
+		if ( !isset($this->connections[$this->use_shard]['read']) ) {
+			$this->connect( 'read' );
+		}
+
 		$query = 'SELECT * FROM '.$table.' WHERE';
 		if ( is_array($restrictions) ) {
 			foreach ( $restrictions as $key => $value ) {
 				if ( $value === now ) {
-					$query .= ' `'.$this->escape($key).'` = "'.self::nowAsUTC().'" AND';	
+					$query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
 				} else if ( $value === current_date ) {
-					$query .= ' `'.$this->escape($key).'` = DATE("'.self::nowAsUTC().'") AND';	
+					$query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
 				} else {
 					$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
 				}
@@ -232,45 +268,32 @@ class Mysql {
 		} else {
 			$query .= ' '.$restrictions;
 		}
-		
+
 		if ( $limit > 0 ) {
 			$query .= ' LIMIT '.$limit;
 		}
-		
+
 		if ( $limit == 1 ) {
 			return $this->read( $query )->fetch_object();
 		} else {
 			return $this->read( $query );
 		}
 	}
-	
-	public static function fetch_all( $query, $result_type = 'ASSOC' ) {
-		$rows = array();
-		if ( $result_type == 'ASSOC' ) {
-			while ( $row = $query->fetch_assoc()) {
-				$rows[] = $row;
-			}
-		} else if ( $result_type == 'OBJ' ) {
-			while ( $row = $query->fetch_object()) {
-				$rows[] = $row;
-			}
-		} else {
-			while ( list($row) = $query->fetch_row() ) {
-				$rows[] = $row;
-			}
+
+	public function count( $table, $fields = null ) {
+		if ( !isset($this->connections[$this->use_shard]['read']) ) {
+			$this->connect( 'read' );
 		}
 
-		return $rows;
-	}
-	
-	public function count( $table, $fields ) {
 		$query = 'SELECT COUNT(*) FROM '.$table.' WHERE';
-		if ( is_array($fields) ) {
+		if ( $fields === null ) {
+			$query .= ' 1';
+		} else if ( is_array($fields) ) {
 			foreach ( $fields as $key => $value ) {
 				if ( $value === now ) {
-					$query .= ' `'.$this->escape($key).'` = "'.self::nowAsUTC().'" AND';	
+					$query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';	
 				} else if ( $value === current_date ) {
-					$query .= ' `'.$this->escape($key).'` = DATE("'.self::nowAsUTC().'") AND';	
+					$query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';	
 				} else {
 					$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
 				}
@@ -298,76 +321,78 @@ class Mysql {
 				}
 			} else {
 				$this->cache[$fingerPrint] = false;
-			}	
+			}
 		} else {
 			++$this->hits;
 		}
-		
+
 		return $this->cache[$fingerPrint];
 	}
 
 	public function affected_rows() {
-		return $this->writeHandler->affected_rows;
+		return $this->connections[$this->use_shard]['write']->affected_rows;
 	}
 
 	public function escape( $string ) {
-        if ($string == null || is_scalar($string))
-		    return $this->writeHandler->real_escape_string( $string );
-        else
-            throw new InvalidArgumentException('escape function only accepts scalar values. Passed value was: ' . var_export($string, true));
+		if ( $string == null || is_scalar($string) )
+			return $this->connections[$this->use_shard]['read']->real_escape_string( $string );
+		else
+			throw new \InvalidArgumentException('escape function only accepts scalar values. Passed value was: ' . var_export($string, true));
 	}
 
 	public function last_id() {
-		return (int) $this->writeHandler->insert_id;
+		return (int) $this->connections[$this->use_shard]['write']->insert_id;
 	}
 
 	public function start_transaction() {
-		$this->writeHandler->autocommit( FALSE );
+		$this->connections[$this->use_shard]['write']->autocommit( FALSE );
 	}
 
 	public function autocommit( $mode ) { // FALSE => START TRANSACTION
-		$this->writeHandler->autocommit( $mode );
+		$this->connections[$this->use_shard]['write']->autocommit( $mode );
 	}
 
 	public function commit() {
-		$this->writeHandler->commit();
+		$this->connections[$this->use_shard]['write']->commit();
 	}
 
 	public function rollback() {
-		$this->writeHandler->rollback();
+		$this->connections[$this->use_shard]['write']->rollback();
+	}
+
+	public function general_rollback() {
+		foreach ( $this->connections as $shard => $connection ) {
+			if ( isset($connection['write']) ) {
+				$connection['write']->rollback();
+			}
+		}
 	}
 
 	public function read_error() {
-		return $this->readHandler->error;
+		return $this->connections[$this->use_shard]['read']->error;
 	}
-	
+
 	public function read_errno() {
-		return $this->readHandler->errno;
+		return $this->connections[$this->use_shard]['read']->errno;
 	}
 
 	public function write_error() {
-		return $this->writeHandler->error;
+		return $this->connections[$this->use_shard]['write']->error;
 	}
-	
+
 	public function write_errno() {
-		return $this->writeHandler->errno;
+		return $this->connections[$this->use_shard]['write']->errno;
 	}
 
 	public function __destruct() {
-		if ( $this->writeHandler != null ) {
-			@$this->writeHandler->close();
-		}
-		if ( $this->readHandler != null ) {
-			@$this->readHandler->close();
-		}
+		$this->connections = array();
 	}
-    
-    
-    public static function nowAsUTC() {
-    	if ( self::$now == null ) {
-			self::$now = new DateTime(null, new DateTimeZone('UTC'));
+
+	public static function utc_timestamp() {
+		if ( self::$now == null ) {
+			self::$now = new \DateTime(null, new \DateTimeZone('UTC'));
 		}
-		
+
 		return self::$now->format('Y-m-d H:i:s');
 	}
 }

@@ -1,37 +1,45 @@
 <?php
-include_once BaseConfig::BASE_PATH.'/zephyros/Inflector.class.php';
+namespace zephyros;
 
 abstract class ActiveRecord {
 	
 	// Object setup
-	protected static $instances = array();
-	
+	protected static $instances = [];
+
 	protected $_db = null;
-	private $_database = '';
-	private $_class = '';
-	private $_name = '';
-	private $_table = '';
-	private $_fkName = '';
-	private $_columns = array();
-	private $_didLoad = true;
-	
+
+	protected $_shard = null;
+	protected $_database = '';
+	protected $_class = '';
+	protected $_name = '';
+	protected $_table = '';
+	protected $_fkName = '';
+	protected $_columns = [];
+	protected $_didLoad = true;
+
 	// Data storage
-	protected $_data = array();
-	protected $_related = array();
-	protected $_localized = array();
-	
+	protected $_data = [];
+	protected $_related = [];
+	protected $_localized = [];
+
 	public function __construct( $id = NULL, $load = true, $strict = false ) {
+		if ( isset($this->shard) && trim($this->shard) != '' ) {
+			$this->_shard = $this->shard;
+		} else {
+			$this->_shard = \Config::DEFAULT_SHARD;
+		}
+
 		$this->_class = get_class( $this );
-		$this->_name = strtolower( Inflector::decamelize( $this->_class ) );
+		$this->_name = strtolower( \zephyros\Inflector::decamelize( join('', array_slice(explode('\\', $this->_class), -1)), '_' ) );
 		$this->_fkName = $this->_name.'_id';
 		
 		if ( isset($this->table_name) && trim($this->table_name) != '' ) {
 			$this->_table = $this->table_name;
 		} else {
-			$this->_table = Inflector::plural( $this->_name );
+			$this->_table = \zephyros\Inflector::plural( $this->_name );
 		}
 
-		$this->_db = Mysql::init();
+		$this->_db = \zephyros\Mysql::init();
 		$this->_table = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$this->_table;
 		
 		if ( $id !== NULL ) {
@@ -48,7 +56,7 @@ abstract class ActiveRecord {
 			} else {
 				foreach ( $id as $key => $value ) {
 					if ( $value === now ) {
-						$value = Mysql::nowAsUTC();
+						$value = \zephyros\Mysql::utc_timestamp();
 					}
 					
 					$this->_data[$key] = $value;
@@ -68,14 +76,18 @@ abstract class ActiveRecord {
 	
 	public function __set( $key, $value ) {
 		if ( $value === now ) {
-			$value = Mysql::nowAsUTC();
+			$value = \zephyros\Mysql::utc_timestamp();
 		}
 		
-		if ( is_array($value) ) {
+		if ( is_array($value) || is_object($value) ) {
 			$this->_related[$key] = $value;
 			$this->_related['_changed'][$key] = true;
 		} else {
-			$this->_data[$key] = $value;
+			if ($value === null && isset($this->_related[$key])) {
+				$this->_related[$key] = $value;
+			} else {
+				$this->_data[$key] = $value;
+			}
 		}
 	}
 	
@@ -93,26 +105,26 @@ abstract class ActiveRecord {
 	public function __call( $name, $arguments ) {
 		if ( strpos( $name, 'add_' ) !== false ) {
 			if ( empty($arguments) ) {
-				throw new Exception( 'Missing value to add to '.Inflector::plural($name) );
+				throw new \Exception( 'Missing value to add to '.\zephyros\Inflector::plural($name) );
 			}
 			if ( !isset($arguments[1]) ) {
-				$this->add( Inflector::plural( str_replace('add_','',$name) ), $arguments[0] );
+				$this->add( \zephyros\Inflector::plural( str_replace('add_','',$name) ), $arguments[0] );
 			} else {
-				$this->add( Inflector::plural( str_replace('add_','',$name) ), $arguments[0], $arguments[1] );
+				$this->add( \zephyros\Inflector::plural( str_replace('add_','',$name) ), $arguments[0], $arguments[1] );
 			}
 		} else if ( strpos( $name, 'remove_' ) !== false ) {
-			$this->remove( Inflector::plural( str_replace('remove_','',$name) ), $arguments );
+			$this->remove( \zephyros\Inflector::plural( str_replace('remove_','',$name) ), $arguments );
 		} else if ( strpos( $name, 'reset_' ) !== false ) {
 			$this->reset( str_replace('reset_','',$name) );
 		} else if ( strpos( $name, 'has_' ) !== false ) {
 			return $this->has( str_replace('has_','',$name) );
 		} else if ( strpos( $name, 'save_' ) !== false ) {
-			$relation = Inflector::singular( str_replace('save_','',$name) );
+			$relation = \zephyros\Inflector::singular( str_replace('save_','',$name) );
 			$this->save_dependent( $relation, $this->has_many[$relation] );
 		} else if ( strpos( $name, 'replace_in_' ) !== false ) {
 			$this->replace( str_replace('replace_in_','',$name), $arguments );
 		} else if ( strpos( $name, 'localize_in_' ) !== false ) {
-			$this->localize( $arguments, str_replace( 'localize_in_', '', $name ) );
+			return $this->localize( $arguments, str_replace( 'localize_in_', '', $name ) );
 		}
 	}
 	
@@ -141,7 +153,7 @@ abstract class ActiveRecord {
 	}
 	
 	final public function reset( $property ) {
-		$this->_related[$property] = array();
+		$this->_related[$property] = [];
 		$this->_related['_changed'][$property] = true;
 	}
 	
@@ -161,13 +173,21 @@ abstract class ActiveRecord {
 	
 	final public function localize( $arguments, $lang = 'en' ) {
 		$lang = strtolower($lang);
-		if ( is_string($arguments) ) {
+		if ( is_scalar($arguments) ) {
 			if ( isset($this->_localized[$lang][$arguments]) ) {
 				return $this->_localized[$lang][$arguments];
+			} else {
+				if ( isset($this->_localized['en'][$arguments]) ) {
+					return $this->_localized['en'][$arguments];
+				}
 			}
-		} else if ( count($arguments) == 1 ) {
+		} else if ( is_array($arguments) && !isset($arguments[1]) ) {
 			if ( isset($this->_localized[$lang][$arguments[0]]) ) {
 				return $this->_localized[$lang][$arguments[0]];
+			} else {
+				if ( isset($this->_localized['en'][$arguments[0]]) ) {
+					return $this->_localized['en'][$arguments[0]];
+				}
 			}
 		} else {
 			$this->_localized[$lang][$arguments[0]] = $arguments[1];
@@ -179,7 +199,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init();
+		$db = \zephyros\Mysql::init();
 
 		if ( is_string($conditions) ) {
 			$query = $conditions;	
@@ -224,6 +244,8 @@ abstract class ActiveRecord {
 			$query .= ' LIMIT 1';
 		} else if ( $what == last ) {
 			$query .= ' ORDER BY `id` DESC LIMIT 1';
+		} else if ( $what == random ) {
+			$query .= ' ORDER BY RAND() LIMIT 1';
 		} else {
 			if ( isset($options['orderby']) ) {
 				$query .= ' ORDER BY '.$options['orderby'];
@@ -235,17 +257,15 @@ abstract class ActiveRecord {
 			}
 		}
 		
-		unset( $temp );
-		
-		$result = $db->read( $query );
+		$result = $db->pick( $temp->_shard )->read( $query );
 		if ( $result === false ) {
-			throw new FindException( $db->read_error(), $db->read_errno() );
+			throw new \zephyros\FindException( $db->read_error(), $db->read_errno() );
 		} else {
-			if ( $what == first || $what == last ) {
-				if ( $result->num_rows == 0 ) {
-					return null;
-				}
+			if ( $result->num_rows == 0 ) {
+				return null;
+			}
 			
+			if ( $what == first || $what == last || $what == random ) {
 				$temp = new $calledClass( $result->fetch_object()->id );
 				$result->free();
 				return $temp;
@@ -264,7 +284,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init();
+		$db = \zephyros\Mysql::init();
 
 		$query = '';
 		foreach ( $conditions as $field => $value ) {
@@ -279,9 +299,7 @@ abstract class ActiveRecord {
 		
 		$query = 'SELECT COUNT(*) FROM '.( trim($temp->_database) != '' ? '`'.$temp->_database.'`.' : '' ).'`'.$temp->_table.'` WHERE '.substr($query,0,-5);
 		
-		unset( $temp );
-		
-		$result = $db->read( $query );
+		$result = $db->pick( $temp->_shard )->read( $query );
 		if ( $result === false ) {
 			return false;
 		} else {
@@ -304,8 +322,8 @@ abstract class ActiveRecord {
 			if ( method_exists( $this, 'before_loading' ) ) {
 				$this->before_loading();
 			}
-			$queryStr = 'SELECT * FROM '.$this->_table.' WHERE id = "'.$this->_db->escape($this->id).'" LIMIT 1';
-			$query = $this->_db->read($queryStr);
+			$queryStr = 'SELECT * FROM '.$this->_table.' WHERE id = "'.$this->_db->escape($this->_data['id']).'" LIMIT 1';
+			$query = $this->_db->pick($this->_shard)->read($queryStr);
 			if ( $query != null ) {
 				$record = $query->fetch_object();
 				if ( $record != null ) {
@@ -314,12 +332,12 @@ abstract class ActiveRecord {
 					}
 				} else {
 					if ( $strict ) {
-						throw new NonExistingItemException(sprintf("Record with id %s not found in table '%s'.", $this->id, $this->_table));
+						throw new \zephyros\NonExistingItemException(sprintf("Record with id %s not found in table '%s'.", $this->_data['id'], $this->_table));
 					}
 				}
 			} else {
-				$msg = $this->_db->read_error();
-				throw new Exception( "Query execution failure, reason: $msg. Query: $queryStr" );
+				$msg = $this->_db->pick($this->_shard)->read_error();
+				throw new \Exception( "Query execution failure, reason: $msg. Query: $queryStr" );
 			}
 			
 			if ( isset($this->has_one) && !empty($this->has_one) ) {
@@ -329,23 +347,19 @@ abstract class ActiveRecord {
 					}
 					
 					if ( isset($details['table_name']) && !empty($details['table_name']) ) {
-						$tableName = $details['table_name'];
+						$table_name = $details['table_name'];
 					} else {
-						$tableName = strtolower($relation);
-						$tableName = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$tableName;
-						$tableName = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$tableName;
+						$table_name = \zephyros\Inflector::plural(strtolower($relation));
+						$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
+						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 					}
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
-						$record = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
-						if ( $record->num_rows == 1 ) {
-							$this->_related[$relation] = (object) $record->fetch_object();
-						} else {
-							$this->_related[$relation] = null;
-						}
+						$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'" LIMIT 1');
+						$this->_related[$relation] = ( $query->num_rows > 0 ? (object) $query->fetch_object() : null );
 					} else {
-						$this->_related[$relation] = $this->_db->result('SELECT id FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'" LIMIT 1');
+						$this->_related[$relation] = $this->_db->pick($this->_shard)->result('SELECT id FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'" LIMIT 1');
 					}
 				}
 			}
@@ -356,30 +370,33 @@ abstract class ActiveRecord {
 						continue;
 					}
 					
-					$key = Inflector::plural( strtolower($relation) );
-					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : $key );
-					$tableName = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$tableName;
-					$tableName = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$tableName;
+					$key = \zephyros\Inflector::plural( strtolower($relation) );
+					if ( isset($details['table_name']) && !empty($details['table_name']) ) {
+						$table_name = $details['table_name'];
+					} else {
+						$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$key;
+					}
+					$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
-						$query = $this->_db->read('SELECT * FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+						$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'"');
 						if ( $query != null ) {
 							while ( $record = $query->fetch_object() ) {
 								$this->_related[$key][] = $record;
 							}
 						} else {
-							throw new Exception( 'Table '.$tableName.' does not exist' );
+							throw new \Exception( 'Table '.$table_name.' does not exist' );
 						}
 					} else {
-						$fieldName = ( isset($details['field_name']) ? $details['field_name'] : 'id' );
-						$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+						$field_name = ( isset($details['field_name']) ? $details['field_name'] : 'id' );
+						$query = $this->_db->pick($this->_shard)->read('SELECT '.$field_name.' FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'"');
 						if ( $query != null ) {
 							while ( list($record) = $query->fetch_row() ) {
 								$this->_related[$key][] = $record;
 							}
 						} else {
-							throw new Exception( 'Table '.$tableName.' does not exist' );
+							throw new \Exception( 'Table '.$table_name.' does not exist' );
 						}
 					}
 				}
@@ -391,34 +408,34 @@ abstract class ActiveRecord {
 						continue;
 					}
 					
-					$key = Inflector::plural( strtolower($relation) );
-					$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
-					$tableName = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$tableName;
+					$key = \zephyros\Inflector::plural( strtolower($relation) );
+					$table_name = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : \zephyros\Inflector::habtmTableName( $this->_name, $relation ) );
+					$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
-					$fieldName = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
+					$field_name = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
 					
-					$query = $this->_db->read('SELECT '.$fieldName.' FROM '.$tableName.' WHERE '.$fk.' = "'.$this->_db->escape($this->id).'"');
+					$query = $this->_db->pick($this->_shard)->read('SELECT '.$field_name.' FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'"');
 					if ( $query != null ) {
 						while ( list($record) = $query->fetch_row() ) {
 							$this->_related[$key][] = $record;
 						}
 					} else {
-						throw new Exception( 'Table '.$tableName.' does not exist' );
+						throw new \Exception( 'Table '.$table_name.' does not exist' );
 					}
 				}
 			}
 			
 			if ( isset($this->is_localized) && $this->is_localized ) {
-				$this->_localized = array();
-				$query = $this->_db->read('SELECT * FROM '.$this->_table.'_localized WHERE parent_id = '.$this->id);
+				$this->_localized = [];
+				$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$this->_table.'_localized WHERE '.$this->_fkName.' = '.$this->_data['id']);
 				if ( $query != null ) {
-					while ( $record = $query->fetch_assoc() ) {
-						$lang = $record['lang'];
-						unset( $record['parent_id'], $record['lang'] );
-						$this->_localized[strtolower($lang)] = $record;
+					while ( $record = $query->fetch_object() ) {
+						$lang = $record->lang;
+						unset( $record->{$this->_fkName}, $record->lang );
+						$this->_localized[strtolower($lang)] = (array) $record;
 					}
 				} else {
-					throw new Exception( 'Table '.$tableName.' does not exist' );
+					throw new \Exception( 'Table '.$table_name.' does not exist' );
 				}
 			}
 			
@@ -438,27 +455,33 @@ abstract class ActiveRecord {
 				$this->before_saving();
 			}
 			
-			$this->_db->upsert( $this->_table, $this->_data, (isset($this->columns_to_increment)?$this->columns_to_increment:null) );
+			$this->_db->pick($this->_shard)->upsert( $this->_table, $this->_data, (isset($this->columns_to_increment)?$this->columns_to_increment:null) );
 			
 			if ( ( !isset($this->_data['id']) || ( isset($this->_data['id']) && $this->_data['id'] == 0 ) ) && ( !isset($this->has_composite_primary_key) || ( isset($this->has_composite_primary_key) && !$this->has_composite_primary_key ) ) ) {
-				$this->_data['id'] = $this->_db->last_id();
+				$this->_data['id'] = (int) $this->_db->pick($this->_shard)->last_id();
+				if ( $this->_data['id'] == 0 ) {
+					throw new \zephyros\PersistingErrorException();
+				}
 			}
 						
 			if ( isset($this->has_one) && !empty($this->has_one) ) {
 				foreach ( $this->has_one as $relation => $details ) {
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
-						if ( isset($this->_related['_changed'][$relation]) || isset($this->_related['_changed'][$relation]) ) {
-							$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : $this->_table.'_'.$relation );
-							$tableName = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$tableName;
+						$key = strtolower($relation);
+						if ( isset($this->_related['_changed'][$relation]) || isset($this->_related['_changed'][$key]) ) {
+							$table_name = \zephyros\Inflector::plural(strtolower($relation));
+							$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
+							$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
+							
 							$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 							
-							if ( is_array($this->_related[strtolower($relation)]) ) {
-								$record = array_merge( array( $fk => $this->id ), $this->_related[strtolower($relation)] );
+							$record = (array)$this->_related[strtolower($relation)];
+							if ( empty($record) ) {
+								$this->_db->pick($this->_shard)->delete( $table_name, [ $fk => $this->_data['id'] ] );
 							} else {
-								$record = array_merge( array(  $fk => $this->id), (array)$this->_related[strtolower($relation)] );
+								$record = array_merge( [ $fk => $this->_data['id'] ], $record );
+								$this->_db->pick($this->_shard)->upsert( $table_name, $record );
 							}
-							
-							$this->_db->upsert( $tableName, $record );
 						}
 					}
 				}
@@ -474,61 +497,67 @@ abstract class ActiveRecord {
 			
 			if ( isset($this->has_many_and_belongs_to_many) && !empty($this->has_many_and_belongs_to_many) ) {
 				foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
-					$key = Inflector::plural( strtolower($relation) );
+					$key = \zephyros\Inflector::plural( strtolower($relation) );
 					if ( isset($this->_related['_changed'][$relation]) || isset($this->_related['_changed'][$key]) ) {
-						$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_class, $relation ) );
-						$tableName = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$tableName;
+						$table_name = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : \zephyros\Inflector::habtmTableName( $this->_name, $relation ) );
+						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
-						$fieldName = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
+						$field_name = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
 						
-						$this->_db->delete( $tableName, array( $fk => $this->id ) );
+						$this->_db->pick($this->_shard)->delete( $table_name, [ $fk => $this->_data['id'] ] );
 						foreach ( $this->_related[$key] as $recordId ) {
-							$this->_db->insert( $tableName, array( $fk => $this->id, $fieldName => $recordId ) );
+							$this->_db->pick($this->_shard)->insert( $table_name, [ $fk => $this->_data['id'], $field_name => $recordId ] );
 						}
 					}
 				}
 			}
 			
 			if ( isset($this->is_localized) && $this->is_localized ) {
-				$this->_db->delete( $this->_table.'_localized', array( 'parent_id' => $this->id ) );
+				$this->_db->pick($this->_shard)->delete( $this->_table.'_localized', [ $this->_fkName => $this->_data['id'] ] );
 				foreach ( $this->_localized as $lang => $record ) {
 					$record = (array) $record;
-					$record = array_merge( array( 'parent_id' => $this->id, 'lang' => $lang ), $record );
-					$this->_db->insert( $this->_table.'_localized', $record );
+					$record = array_merge( [ $this->_fkName => $this->_data['id'], 'lang' => $lang ], $record );
+					$this->_db->pick($this->_shard)->insert( $this->_table.'_localized', $record );
 				}
-			}
-			
-			if ( method_exists( $this, 'after_saving' ) ) {
-				$this->after_saving();
 			}
 			
 			if ( !isset($this->do_not_cache) || ( isset($this->do_not_cache) && !$this->do_not_cache ) ) {
 				$this->_clearCache();
 			}
+
+			if ( method_exists( $this, 'after_saving' ) ) {
+				$this->after_saving();
+			}
 			
-			return $this->id;
+			return $this->_data['id'];
 		}
 	}
 	
 	final public function save_dependent( $relation, $details = null ) {
-		$key = Inflector::plural( strtolower($relation) );
+		$key = \zephyros\Inflector::plural( strtolower($relation) );
 		
 		if ( isset($this->_related['_changed'][$key]) || isset($this->_related['_changed'][$relation]) ) {
-			
-			$tableName = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : $key );
-			$tableName = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$tableName;
-			$tableName = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$tableName;
+			if ( isset($details['table_name']) && !empty($details['table_name']) ) {
+				$table_name = $details['table_name'];
+			} else {
+				$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$key;
+			}
+
+			$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 			$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 			
-			$result = $this->_db->delete( $tableName, array( $fk => $this->id ) );
+			$this->_db->pick($this->_shard)->delete( $table_name, [$fk => $this->_data['id'] ] );
 			foreach ( $this->_related[$key] as $record ) {
 				if ( is_array($record) ) {
-					$record = array_merge( array( $fk => $this->id ), $record );
+					unset($record[$fk]);
+					$record = array_merge( [$fk => $this->_data['id'] ), $reco ] );
 				} else {
-					$record = array_merge( array(  $fk => $this->id), (array)$record );
+					$record = (array)$record;
+					unset($record[$fk]);
+					$record = array_merge( [ $fk => $this->_data['id']), $reco ] );
 				}
 				
-				$this->_db->insert( $tableName, $record );
+				$this->_db->pick($this->_shard)->insert( $table_name, $record );
 			}
 			
 		}
@@ -539,7 +568,7 @@ abstract class ActiveRecord {
 			$this->before_deleting();
 		}
 		
-		$this->_db->delete( $this->_table, array( 'id' => $this->id ) );
+		$this->_db->pick($this->_shard)->delete( $this->_table, ['id' => $this->_data['id'] ] );
 		
 		if ( method_exists( $this, 'after_deleting' ) ) {
 			$this->after_deleting();
@@ -551,13 +580,13 @@ abstract class ActiveRecord {
 	}
 	
 	private function _isCached() {
-		return file_exists( BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache' );
+		return \zephyros\Cache::exists( 'ar:'.$this->_class.':'.$this->_data['id'] );
 	}
 	
 	private function _readCache() {
-		$obj = unserialize(file_get_contents(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache'));
+		$obj = \zephyros\Cache::get( 'ar:'.$this->_class.':'.$this->_data['id'] );
 		
-		if( !is_object($obj) ) {
+		if( $obj === false ) {
 			return;
 		}
 		
@@ -569,53 +598,43 @@ abstract class ActiveRecord {
 	}
 	
 	private function _writeCache() {
-		if ( DEV_ENVIRONMENT ) {
-			return;
-		}
-		$toSerialize = serialize($this);
-		if ( trim($toSerialize) != "" ) {
-			if ( !file_exists(BaseConfig::CACHE_PATH.'/'.$this->_class) ) {
-				mkdir(BaseConfig::CACHE_PATH.'/'.$this->_class, 0777, true);
-			}
-			@file_put_contents(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache', $toSerialize);
-			@chmod(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache',0766);
-		}
+		\zephyros\Cache::set( 'ar:'.$this->_class.':'.$this->_data['id'], $this, 7200 );
 	}
 	
 	private function _clearCache() {
-		if( is_file(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache') && file_exists(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache') ) {
-			@unlink(BaseConfig::CACHE_PATH.'/'.$this->_class.'/'.$this->id.'.cache');
-		}
+		\zephyros\Cache::delete( 'ar:'.$this->_class.':'.$this->_data['id'] );
 	}
 	
 	final public function _snapshot() {
-		return array(
+		return [
 			'_data' => $this->_data,
 			'_related' => $this->_related,
 			'_localized' => $this->_localized
-		);
+		];
 	}
 	
-	protected function __sleep() {
-		return array( '_data', '_related', '_localized' );
+	final public function __sleep() {
+		return [ '_data', '_related', '_localized' ];
 	}
 	
 	public function __toString() {
-		return $this->_class.' #'.$this->id;
+		return $this->_class.' #'.$this->_data['id'];
 	}
 	
 	final public function _reflection() {
-		return (object) array(
+		return (object) [
 			'_database' => $this->_database,
+			'_shard' => $this->_shard,
 			'_class' => $this->_class,
 			'_name' => $this->_name,
 			'_table' => $this->_table,
 			'_fkName' => $this->_fkName,
 			'_columns' => $this->_columns
-		);
+		];
 	}
 }
 
-class NonExistingItemException extends Exception {}
-class FindException extends Exception {}
+class NonExistingItemException extends \Exception {}
+class FindException extends \Exception {}
+class PersistingErrorException extends \Exception {}
 ?>
