@@ -1,5 +1,7 @@
 <?php
-namespace zephyros;
+namespace bits4breakfast\zephyros;
+
+use bits4breakfast\zephyros\ServiceBus;
 
 class Cache {
 	
@@ -25,7 +27,7 @@ class Cache {
 	public static function exists( $key ) {
 		$key = \Config::BASE_DOMAIN.':'.$key;
 		if ( self::$instance === null ) {
-			self::$instance = new \zephyros\Cache();
+			self::$instance = new Cache();
 		}
 		
 		return ( apc_exists( $key ) || self::$instance->memcache->append( $key, null ) );
@@ -37,14 +39,14 @@ class Cache {
 	
 	public static function commit() {
 		if ( !empty(self::$deleted_keys) ) {
-			\ehbox\core\ServiceBus::emit( 'invalidate_cache', (array) array_keys(self::$deleted_keys) );
+			ServiceBus::emit( 'invalidate_cache', (array) array_keys(self::$deleted_keys) );
 		}
 	}
 	
 	public static function set( $key, $value, $ttl = self::TTL_HOUR ) {
 		$key = \Config::BASE_DOMAIN.':'.$key;
 		if ( self::$instance === null ) {
-			self::$instance = new \zephyros\Cache();
+			self::$instance = new Cache();
 		}
 			
 		self::$instance->memcache->set( $key, $value, self::TTL_TWO_DAYS );
@@ -59,7 +61,7 @@ class Cache {
 			return $value;
 		} else {
 			if ( self::$instance === null ) {
-				self::$instance = new \zephyros\Cache();
+				self::$instance = new Cache();
 			}
 			
 			$value = self::$instance->memcache->get( $key );
@@ -76,7 +78,7 @@ class Cache {
 	public static function delete( $key ) {
 		$key = \Config::BASE_DOMAIN.':'.$key;
 		if ( self::$instance === null ) {
-			self::$instance = new \zephyros\Cache();
+			self::$instance = new Cache();
 		}
 		
 		if ( !isset(self::$deleted_keys[$key]) ) {
@@ -89,7 +91,7 @@ class Cache {
 	public static function set_to_memcache( $key, $value, $ttl = self::TTL_TWO_DAYS ) {
 		$key = \Config::BASE_DOMAIN.':'.$key;
 		if ( self::$instance === null ) {
-			self::$instance = new \zephyros\Cache();
+			self::$instance = new Cache();
 		}
 		
 		self::$instance->memcache->set( $key, $value, $ttl );
@@ -98,21 +100,16 @@ class Cache {
 	public static function get_from_memcache( $key ) {
 		$key = \Config::BASE_DOMAIN.':'.$key;
 		if ( self::$instance === null ) {
-			self::$instance = new \zephyros\Cache();
+			self::$instance = new Cache();
 		}
 		
-		$value = self::$instance->memcache->get( $key );
-		if ( $value !== false ) {
-			//self::$instance->memcache->touch( $key, self::TTL_TWO_DAYS );
-		}
-		
-		return $value;
+		return self::$instance->memcache->get( $key );
 	}
 	
 	public static function delete_from_memcache( $key ) {
 		$key = \Config::BASE_DOMAIN.':'.$key;
 		if ( self::$instance === null ) {
-			self::$instance = new \zephyros\Cache();
+			self::$instance = new Cache();
 		}
 		
 		self::$instance->memcache->delete( $key );
@@ -121,7 +118,7 @@ class Cache {
 	public static function append_to_memcache( $key, $value ) {
 		$key = \Config::BASE_DOMAIN.':'.$key;
 		if ( self::$instance === null ) {
-			self::$instance = new \zephyros\Cache();
+			self::$instance = new Cache();
 		}
 		
 		$previous_value = self::$instance->memcache->get( $key );

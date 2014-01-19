@@ -1,5 +1,5 @@
 <?php
-namespace zephyros;
+namespace bits4breakfast\zephyros;
 
 abstract class ActiveRecord {
 	
@@ -36,7 +36,7 @@ abstract class ActiveRecord {
 		if ( isset($this->table_name) && trim($this->table_name) != '' ) {
 			$this->_table = $this->table_name;
 		} else {
-			$this->_table = \zephyros\Inflector::plural( $this->_name );
+			$this->_table = $this->_name;
 		}
 
 		$this->_db = \zephyros\Mysql::init();
