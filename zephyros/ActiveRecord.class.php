@@ -356,6 +356,7 @@ abstract class ActiveRecord {
 						$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
 						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 					}
+
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
@@ -378,8 +379,9 @@ abstract class ActiveRecord {
 						$table_name = $details['table_name'];
 					} else {
 						$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$key;
+						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 					}
-					$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
+					
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
@@ -412,8 +414,13 @@ abstract class ActiveRecord {
 					}
 					
 					$key = Inflector::plural( strtolower($relation) );
-					$table_name = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_name, $relation ) );
-					$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
+					if ( isset($details['table_name']) && !empty($details['table_name']) ) {
+						$table_name = $details['table_name'];
+					} else {
+						$table_name = Inflector::habtmTableName( $this->_name, $relation );
+						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
+					}
+					
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					$field_name = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
 					
@@ -472,9 +479,13 @@ abstract class ActiveRecord {
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
 						$key = strtolower($relation);
 						if ( isset($this->_related['_changed'][$relation]) || isset($this->_related['_changed'][$key]) ) {
-							$table_name = Inflector::plural(strtolower($relation));
-							$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
-							$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
+							if ( isset($details['table_name']) && !empty($details['table_name']) ) {
+								$table_name = $details['table_name'];
+							} else {
+								$table_name = Inflector::plural(strtolower($relation));
+								$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
+								$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
+							}
 							
 							$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 							
@@ -502,8 +513,13 @@ abstract class ActiveRecord {
 				foreach ( $this->has_many_and_belongs_to_many as $relation => $details ) {
 					$key = Inflector::plural( strtolower($relation) );
 					if ( isset($this->_related['_changed'][$relation]) || isset($this->_related['_changed'][$key]) ) {
-						$table_name = ( isset($details['table_name']) && !empty($details['table_name']) ? $details['table_name'] : Inflector::habtmTableName( $this->_name, $relation ) );
-						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
+						if ( isset($details['table_name']) && !empty($details['table_name']) ) {
+							$table_name = $details['table_name'];
+						} else {
+							$table_name = Inflector::habtmTableName( $this->_name, $relation );
+							$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
+						}
+						
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$field_name = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
 						
@@ -544,9 +560,9 @@ abstract class ActiveRecord {
 				$table_name = $details['table_name'];
 			} else {
 				$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$key;
+				$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 			}
 
-			$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 			$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 			
 			$this->_db->pick($this->_shard)->delete( $table_name, [$fk => $this->_data['id'] ] );
