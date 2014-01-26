@@ -656,4 +656,3 @@ abstract class ActiveRecord {
 class NonExistingItemException extends \Exception {}
 class FindException extends \Exception {}
 class PersistingErrorException extends \Exception {}
-?>

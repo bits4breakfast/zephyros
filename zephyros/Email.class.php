@@ -1,7 +1,7 @@
 <?php
 namespace bits4breakfast\zephyros;
 
-class Email extends \vendor\PHPMailer {
+class Email extends \PHPMailer {
 
 	public function __construct($senderAddress = null, $senderName = null) {
 		parent::__construct(true);
@@ -151,4 +151,3 @@ class Email extends \vendor\PHPMailer {
 		return trim(preg_replace('/(%0A|%0D|\n+|\r+)(content-type:|to:|cc:|bcc:)/i', '', $value));
 	}
 }
-?>

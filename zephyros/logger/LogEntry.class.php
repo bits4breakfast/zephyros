@@ -86,4 +86,3 @@ class LogEntry {
 		return $s;
 	}
 }
-?>

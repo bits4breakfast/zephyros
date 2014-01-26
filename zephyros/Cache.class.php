@@ -125,4 +125,3 @@ class Cache {
 		self::$instance->memcache->set( $key, $previous_value.$value );
 	}
 }
-?>

@@ -45,4 +45,3 @@ class CustomLogAppender extends AppenderBase {
 		}
 	}
 }
-?>

@@ -30,9 +30,4 @@ class QueryLogAppender extends AppenderBase {
 			fclose($this->fp);
 		}
 	}
-
-
 }
-
-
-?>

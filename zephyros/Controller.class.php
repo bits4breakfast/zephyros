@@ -1,5 +1,5 @@
 <?php
-namespace zephyros;
+namespace bits4breakfast\zephyros;
 
 class Controller {
 	protected $db = null;
@@ -239,4 +239,3 @@ class UserNotLoggedException extends \Exception {}
 class SecurityException extends \Exception {}
 class InvalidRequestException extends \Exception {}
 class BusinessLogicErrorException extends \Exception {}
-?>

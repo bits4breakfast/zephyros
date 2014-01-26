@@ -47,4 +47,3 @@ class EmailAppender extends AppenderBase {
 		$mailer->Send();
 	}
 }
-?>

@@ -9,4 +9,3 @@ class StandardLogAppender extends AppenderBase {
 		error_log( sprintf('%s. %s - %s', $entry->levelName, $entry->title, $details), 0 );
 	}
 }
-?>

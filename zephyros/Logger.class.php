@@ -80,4 +80,3 @@ class Logger {
 		return self::$appenders;
 	}
 }
-?>

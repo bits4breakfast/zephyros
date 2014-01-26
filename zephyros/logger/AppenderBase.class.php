@@ -16,4 +16,3 @@ abstract class AppenderBase {
 		$this->append($entry);
 	}
 }
-?>

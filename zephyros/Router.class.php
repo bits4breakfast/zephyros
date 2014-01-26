@@ -176,4 +176,3 @@ class Router {
 }
 
 $__r = new Router();
-?>

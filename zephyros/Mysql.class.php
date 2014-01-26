@@ -396,5 +396,3 @@ class Mysql {
 		return self::$now->format('Y-m-d H:i:s');
 	}
 }
-
-?>
