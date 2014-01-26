@@ -15,21 +15,19 @@ if ( getenv('ENVIRONMENT') == 'dev' ) {
 	define('PROD_ENVIRONMENT', true);
 }
 
+include __DIR__.'/../vendor/autoload.php';
+
 function zephyros_class_loader( $class_name ) {
-	if ( $class_name == 'Smarty' ) {
-		include \Config::BASE_PATH.'/zephyros/Smarty/Smarty.class.php';
-	} else {
-		$fully_qualified_name_pieces = explode('\\', $class_name );
-		
-		if ( $fully_qualified_name_pieces[0] == 'zephyros' ) {
-			include \Config::BASE_PATH.'/'.implode('/', $fully_qualified_name_pieces).'.class.php';
-		} else if ( isset($fully_qualified_name_pieces[1]) && $fully_qualified_name_pieces[1] == 'core' ) {
-			unset($fully_qualified_name_pieces[0],$fully_qualified_name_pieces[1]);
-			include \Config::BASE_PATH.'/core/'.implode('/', $fully_qualified_name_pieces).'.class.php';
-		} else if ( $fully_qualified_name_pieces[0] == \Config::NS ) {
-			unset($fully_qualified_name_pieces[0]);
-			include \Config::BASE_PATH.'/application/'.implode('/', $fully_qualified_name_pieces).'.class.php';
-		}
+	$fully_qualified_name_pieces = explode('\\', $class_name );
+	
+	if ( $fully_qualified_name_pieces[0] == 'zephyros' ) {
+		include \Config::BASE_PATH.'/'.implode('/', $fully_qualified_name_pieces).'.class.php';
+	} else if ( isset($fully_qualified_name_pieces[1]) && $fully_qualified_name_pieces[1] == 'core' ) {
+		unset($fully_qualified_name_pieces[0],$fully_qualified_name_pieces[1]);
+		include \Config::BASE_PATH.'/core/'.implode('/', $fully_qualified_name_pieces).'.class.php';
+	} else if ( $fully_qualified_name_pieces[0] == \Config::NS ) {
+		unset($fully_qualified_name_pieces[0]);
+		include \Config::BASE_PATH.'/application/'.implode('/', $fully_qualified_name_pieces).'.class.php';
 	}
 }
 
