@@ -3,7 +3,7 @@
 	"type":"library",
 	"autoload": {
         "psr-4": {
-			"Bits4breakfast\\Zephyros": ""
+			"Bits4breakfast\\Zephyros\\": ""
         }
     },
 	"require":{
