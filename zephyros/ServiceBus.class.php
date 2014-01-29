@@ -1,5 +1,5 @@
 <?php
-namespace bits4breakfast\zephyros;
+namespace Bits4breakfast\Zephyros;
 
 require_once \Config::AWS_SDK_PATH.'/aws.phar';
 

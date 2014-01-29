@@ -1,8 +1,8 @@
 <?php
-namespace bits4breakfast\zephyros;
+namespace Bits4breakfast\Zephyros;
 
-use bits4breakfast\zephyros\Mysql;
-use bits4breakfast\zephyros\Inflector;
+use Bits4breakfast\Zephyros\Mysql;
+use Bits4breakfast\Zephyros\Inflector;
 
 abstract class ActiveRecord {
 	

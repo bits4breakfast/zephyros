@@ -1,5 +1,5 @@
 <?php
-namespace bits4breakfast\zephyros;
+namespace Bits4breakfast\Zephyros;
 
 if ( !defined("first") ) {
 	define('first', 0);

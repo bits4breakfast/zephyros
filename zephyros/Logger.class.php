@@ -1,10 +1,10 @@
 <?php
-namespace bits4breakfast\zephyros;
+namespace Bits4breakfast\Zephyros;
 
-use bits4breakfast\zephyros\logger\LogEntry,
-	bits4breakfast\zephyros\logger\StandardLogAppender,
-	bits4breakfast\zephyros\logger\CustomLogAppender,
-	bits4breakfast\zephyros\logger\EmailAppender;
+use Bits4breakfast\Zephyros\logger\LogEntry,
+	Bits4breakfast\Zephyros\logger\StandardLogAppender,
+	Bits4breakfast\Zephyros\logger\CustomLogAppender,
+	Bits4breakfast\Zephyros\logger\EmailAppender;
 
 class Logger {
 

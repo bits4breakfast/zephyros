@@ -1,7 +1,7 @@
 <?php
-namespace bits4breakfast\zephyros;
+namespace Bits4breakfast\Zephyros;
 
-use bits4breakfast\zephyros\ServiceBus;
+use Bits4breakfast\Zephyros\ServiceBus;
 
 class Cache {
 	

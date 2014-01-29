@@ -1,4 +1,11 @@
 {
+	"name":"bits4breakfast/zephyros",
+	"type":"project",
+	"autoload": {
+        "psr-4": {
+			"Bits4breakfast\\Zephyros": "zephyros/"
+        }
+    },
 	"require":{
 		"phpmailer/phpmailer": "dev-master",
 		"smarty/smarty": "v3.1.16",

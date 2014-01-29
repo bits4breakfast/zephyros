@@ -1,5 +1,5 @@
 <?php
-namespace bits4breakfast\zephyros;
+namespace Bits4breakfast\Zephyros;
 
 /*
 	As defined here http://www.php.net/manual/en/function.uniqid.php#94959
