@@ -1,9 +1,9 @@
 {
 	"name":"bits4breakfast/zephyros",
-	"type":"project",
+	"type":"library",
 	"autoload": {
         "psr-4": {
-			"Bits4breakfast\\Zephyros": "zephyros/"
+			"Bits4breakfast\\Zephyros": ""
         }
     },
 	"require":{
