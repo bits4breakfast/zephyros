@@ -7,10 +7,10 @@
         }
     },
 	"require":{
-		"smarty/smarty": "v3.1.16"
-	},
-	"require-dev":{
+		"smarty/smarty": "v3.1.16",
 		"phpmailer/phpmailer": "dev-master",
-		"aws/aws-sdk-php": "dev-master"
-	}
+		"aws/aws-sdk-php": "dev-master",
+		"monolog/monolog": "1.7.0"
+	},
+	"minimum-stability": "dev"
 }
