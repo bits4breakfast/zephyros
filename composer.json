@@ -12,5 +12,5 @@
 		"aws/aws-sdk-php": "dev-master",
 		"monolog/monolog": "1.7.0"
 	},
-	"minimum-stability": "dev"
+	"minimum-stability": "dev-master"
 }
