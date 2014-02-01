@@ -1,6 +1,10 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
+use Bits4breakfast\Zephyros\RouteParameters;
+use Bits4breakfast\Zephyros\Config;
+use Bits4breakfast\Zephyros\ServiceContainer;
+
 final class AppLoader {
 
 	private $p = null;
@@ -15,7 +19,7 @@ final class AppLoader {
 			throw new \InvalidArgumentException( '$subdomain cannot be an empty string' );
 		}
 
-		$this->p = new RouteParameters;
+		$this->p = new Route;
 		$this->p->subdomain = $subdomain;
 	}
 

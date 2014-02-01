@@ -1,7 +1,7 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-class RouteParameters {
+class Route {
 	public $subdomain = 'www';
 	public $method = 'GET';
 	public $controller = '';

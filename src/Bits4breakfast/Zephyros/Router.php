@@ -7,7 +7,7 @@ class Router {
 	private $p = null;
 	private $config = null;
 
-	public function __construct( RouterParameters $p, Config $config) {
+	public function __construct(Route $p, Config $config) {
 		$this->p = $p;
 		$this->config = $config;
 	}
