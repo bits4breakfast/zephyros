@@ -1,14 +1,12 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-use Bits4breakfast\Zephyros\RouteParameters;
-use Bits4breakfast\Zephyros\Config;
-use Bits4breakfast\Zephyros\ServiceContainer;
-
 final class AppLoader {
 
 	private $p = null;
 	private $environemnt = 'dev';
+	private $app_base_path;
+
 	private $controller = null;
 
 	public function __construct($subdomain = 'www') {
@@ -19,6 +17,8 @@ final class AppLoader {
 			throw new \InvalidArgumentException( '$subdomain cannot be an empty string' );
 		}
 
+		$this->app_base_path = realpath(getcwd().'/../..');
+
 		$this->p = new Route;
 		$this->p->subdomain = $subdomain;
 	}
@@ -27,10 +27,10 @@ final class AppLoader {
 		if ( isset($_ENV['ZEPHYROS_APP_ENVIRONMENT']) ) {
 			$this->environemnt = $_ENV['ZEPHYROS_APP_ENVIRONMENT'];
 		} else {
-			$_ENV['ZEPHYROS_APP_ENVIRONMENT'] = 'dev';
+			$this->environemnt = 'dev';
 		}
 
-		$config = new Config($this->p->subdomain);
+		$config = new Config($this->app_base_path, $this->p->subdomain, $this->environemnt);
 		$container = new ServiceContainer($config);
 
 		$router = new Router($this->p, $config);

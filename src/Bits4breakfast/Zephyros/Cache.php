@@ -10,31 +10,22 @@ class Cache {
 	const TTL_DAY = 86400;
 	const TTL_TWO_DAYS = 259200;
 	
-	public static $instance = null;
-	public static $deleted_keys = [];
-	
-	public $memcache = null;
-	
-	public function __construct() {
-		$this->memcache = new \Memcached( \Config::MEMCACHE_CONNECTION_ID );
-		$this->memcache->setOption( \Memcached::OPT_COMPRESSION, false );
-		$servers_list = $this->memcache->getServerList();
-		if ( empty($servers_list) ) {
-			$this->memcache->addServer( \Config::MEMCACHE_URL, \Config::MEMCACHE_PORT );
-		}
-	}
-	
-	public static function exists( $key ) {
-		$key = \Config::BASE_DOMAIN.':'.$key;
-		if ( self::$instance === null ) {
-			self::$instance = new Cache();
-		}
-		
-		return ( apc_exists( $key ) || self::$instance->memcache->append( $key, null ) );
-	}
+	public static $config = null;
+	public static $container = null;
 
-	public function __destruct() {
-		//self::commit();	
+	public static $deleted_keys = [];
+
+	public static $memcache = null;
+	
+	public function __construct( Config $config ) {
+		self::$app_id = $config->get('kernel.app_id');
+
+		self::$memcache = new \Memcached( $this->config->get('memcache.connection_id') );
+		self::$memcache->setOption( \Memcached::OPT_COMPRESSION, false );
+		$servers_list = self::$memcache->getServerList();
+		if ( empty($servers_list) ) {
+			$this->memcache->addServer( $config->get('memcache.url'), $config->get('memcache.port') );
+		}
 	}
 	
 	public static function commit() {
@@ -44,30 +35,22 @@ class Cache {
 	}
 	
 	public static function set( $key, $value, $ttl = self::TTL_HOUR ) {
-		$key = \Config::BASE_DOMAIN.':'.$key;
-		if ( self::$instance === null ) {
-			self::$instance = new Cache();
-		}
+		$key = self::$app_id.':'.$key;
 			
-		self::$instance->memcache->set( $key, $value, self::TTL_TWO_DAYS );
+		self::$memcache->set( $key, $value, self::TTL_TWO_DAYS );
 		
 		apc_store( $key, $value, $ttl );
 	}
 	
 	public static function get( $key ) {
-		$key = \Config::BASE_DOMAIN.':'.$key;
+		$key = self::$app_id.':'.$key;
 		$value = apc_fetch( $key );
 		if ( $value !== false ) {
 			return $value;
-		} else {
-			if ( self::$instance === null ) {
-				self::$instance = new Cache();
-			}
-			
-			$value = self::$instance->memcache->get( $key );
+		} else {			
+			$value = self::$memcache->get( $key );
 			
 			if ( $value !== false ) {
-				//self::$instance->memcache->touch( $key, self::TTL_TWO_DAYS );
 				apc_store( $key, $value, self::TTL_HOUR );
 			}
 			
@@ -76,52 +59,30 @@ class Cache {
 	}
 	
 	public static function delete( $key ) {
-		$key = \Config::BASE_DOMAIN.':'.$key;
-		if ( self::$instance === null ) {
-			self::$instance = new Cache();
-		}
+		$key = self::$app_id.':'.$key;
 		
 		if ( !isset(self::$deleted_keys[$key]) ) {
-			self::$instance->memcache->delete( $key );
+			self::$memcache->delete( $key );
 			apc_delete( $key );
 			self::$deleted_keys[$key] = true;
 		}
 	}
 	
 	public static function set_to_memcache( $key, $value, $ttl = self::TTL_TWO_DAYS ) {
-		$key = \Config::BASE_DOMAIN.':'.$key;
-		if ( self::$instance === null ) {
-			self::$instance = new Cache();
-		}
+		$key = self::$app_id.':'.$key;
 		
-		self::$instance->memcache->set( $key, $value, $ttl );
+		self::$memcache->set( $key, $value, $ttl );
 	}
 	
 	public static function get_from_memcache( $key ) {
-		$key = \Config::BASE_DOMAIN.':'.$key;
-		if ( self::$instance === null ) {
-			self::$instance = new Cache();
-		}
+		$key = self::$app_id.':'.$key;
 		
-		return self::$instance->memcache->get( $key );
+		return self::$memcache->get( $key );
 	}
 	
 	public static function delete_from_memcache( $key ) {
-		$key = \Config::BASE_DOMAIN.':'.$key;
-		if ( self::$instance === null ) {
-			self::$instance = new Cache();
-		}
+		$key = self::$app_id.':'.$key;
 		
-		self::$instance->memcache->delete( $key );
-	}
-	
-	public static function append_to_memcache( $key, $value ) {
-		$key = \Config::BASE_DOMAIN.':'.$key;
-		if ( self::$instance === null ) {
-			self::$instance = new Cache();
-		}
-		
-		$previous_value = self::$instance->memcache->get( $key );
-		self::$instance->memcache->set( $key, $previous_value.$value );
+		self::$memcache->delete( $key );
 	}
 }
