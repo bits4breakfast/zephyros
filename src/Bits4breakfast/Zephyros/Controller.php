@@ -35,8 +35,8 @@ class Controller {
 		if ( $allowed_languages === NULL || ($allowed_languages && !in_array($lang, $allowed_languages))) {
 			$lang = 'en';
 		}
-		$this->db = Mysql::init( $container );
-		$this->l = new LanguageManager( $lang );
+		$this->l = new LanguageManager($container, $lang);
+		$this->db = Mysql::init($container);
 	}
 
 	public function render() {
