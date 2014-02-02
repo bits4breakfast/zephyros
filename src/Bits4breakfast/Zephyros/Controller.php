@@ -50,26 +50,26 @@ class Controller {
 				throw new NotFoundException();
 			}
 		} catch ( HttpException $e ) {
-			$this->_render_error($e->getCode());
+			$this->_render_error($e->getCode(),$e->getMessage(),$e->getPayload());
 		} catch ( \Exception $e ) {
 			$this->_render_error(500);
 		}
-
-		$this->generate_output();
 	}
 
-	final protected function _render_error( $error_code ) {
+	final protected function _render_error( $error_code, $message = '', $payload = [] ) {
 		$this->db->general_rollback();
 		\HttpResponse::status( $error_code );
 		if ( $this->route->format == 'html' ) {
 			if ($this->container->config()->get('errors.rescue_page')) {
-				$fully_qualified_name = '\\'.$this->container->config()->get('base.namespace').'\\UI\\'.$this->route->subdomain.'\\Errors';
+				$fully_qualified_name = '\\'.$this->container->config()->get('base.namespace').'\\UI\\'.ucfirst(strtolower($this->route->subdomain)).'\\ErrorPage';
 				$this->response = new $fully_qualified_name();
 				$this->response->error_code = $error_code;
+				$this->response->message = $message;
+				$this->response->payload = $payload;
 				$this->generate_output();
 			}
 		} else {
-			$this->response( 'ERROR' );
+			$this->response( 'ERROR', $payload );
 		}
 	}
 
@@ -138,7 +138,7 @@ class Controller {
 		unset( $_SESSION['user_id'] );
 	}
 
-	public final function generate_output() {
+	public final function shutdown() {
 		if ($this->route->format == 'json') {
 			if ( $this->response == null ) {
 				$this->response();
@@ -157,6 +157,7 @@ class Controller {
 				echo '<h1>Error: #'.$this->response['code'].'</h1>';
 			}
 		}
+		Cache::commit();
 	}
 
 	public function response($code = 'ACK', $payload = null) {

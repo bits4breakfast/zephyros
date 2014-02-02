@@ -42,6 +42,7 @@ final class AppLoader {
 			$controller = implode('\\', $controller);
 			$controller = new $controller($this->route, $container, $config);
 			$controller->render();
+			$controller->shutdown();
 		} else {
 			\HttpResponse::status( 501 );
 		}
