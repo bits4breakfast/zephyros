@@ -5,13 +5,12 @@ use Monolog\Logger;
 
 class ServiceContainer {
 
-	private $config = null;
+	private $services = [];
 
 	public function __construct( Config $config ) {
-		$this->config = $config;
-
+		$this->services['bits4brekfast.zephyros.config'] = $config;
 		$this->services['bits4brekfast.zephyros.logger'] = new Logger( 'bits4brekfast.zephyros.logger' );
-		$this->services['bits4brekfast.zephyros.cache'] = new Cache( $this->config );
+		$this->services['bits4brekfast.zephyros.cache'] = new Cache( $config );
 	}
 
 	public function get( $service_id ) {
@@ -31,5 +30,9 @@ class ServiceContainer {
 
 	public function cache() {
 		return $this->services['bits4brekfast.zephyros.cache'];
+	}
+
+	public function config() {
+		return $this->services['bits4brekfast.zephyros.config'];
 	}
 }
