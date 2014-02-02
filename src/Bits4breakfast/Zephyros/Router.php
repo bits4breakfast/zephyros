@@ -73,7 +73,7 @@ class Router {
 		}
 		
 		return [
-			$this->config->get('namespace'),
+			$this->config->get('base.namespace'),
 			'Controller',
 			$this->p->subdomain,
 			Inflector::camelize( $this->p->controller )
