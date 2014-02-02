@@ -18,7 +18,7 @@ class Controller {
 
 	public function __construct( Route $route, ServiceContainer $container ) {
 		$this->route = $route;
-		$this->config = $container->config;
+		$this->config = $container->config();
 		$this->container = $container;
 
 		if (isset($_SESSION['user_id'])) {
