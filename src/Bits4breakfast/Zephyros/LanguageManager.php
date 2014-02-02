@@ -11,16 +11,16 @@ class LanguageManager {
 	protected $cache = [];
 	
 	
-	public function __construct( $lang = 'EN' ) {
-		$this->db = \zephyros\Mysql::init();
+	public function __construct(ServiceContainer $container, $lang = 'en') {
+		$this->db = Mysql::init($container);
 		
 		$this->lang = strtoupper($lang);
 	}
 	
-	public static function init( $lang = 'EN' ) {
+	public static function init(ServiceContainer $container, $lang = 'en') {
 		
 		if( !isset(self::$instances[$lang]) )
-			self::$instances[$lang] = new \zephyros\LanguageManager($lang);
+			self::$instances[$lang] = new LanguageManager($container, $lang);
 		
 		return self::$instances[$lang];
 	}
