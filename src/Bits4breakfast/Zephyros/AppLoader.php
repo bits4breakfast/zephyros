@@ -1,6 +1,8 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
+use Bits4breakfast\Zephyros\Exception\Http\NotFoundException;
+
 final class AppLoader {
 
 	private $p = null;
@@ -19,8 +21,8 @@ final class AppLoader {
 
 		$this->app_base_path = realpath(getcwd().'/../..');
 
-		$this->p = new Route;
-		$this->p->subdomain = $subdomain;
+		$this->route = new Route;
+		$this->route->subdomain = $subdomain;
 	}
 
 	public function boot() {
@@ -30,21 +32,32 @@ final class AppLoader {
 			$this->environemnt = 'dev';
 		}
 
-		$config = new Config($this->app_base_path, $this->p->subdomain, $this->environemnt);
+		$config = new Config($this->app_base_path, $this->route->subdomain, $this->environemnt);
 		$container = new ServiceContainer($config);
 
-		$router = new Router($this->p, $config);
+		$router = new Router($this->route, $config);
 		$controller = $router->route();
 
-		if (! extension_loaded ('newrelic') ) {
+		if ( file_exists($this->app_base_path.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
+			$controller = implode('\\', $controller);
+			$controller = new $controller;
+			$controller->config = $config;
+			$controller->container = $container;
+			$controller->route = $this->route;
+			$controller->render();
+		} else {
+			\HttpResponse::status( 501 );
+		}
+
+		if (extension_loaded ('newrelic')) {
 			$this->track_with_newrelic();
 		}
 	}
 
 	private function track_with_newrelic() {
-		newrelic_set_appname( $this->p->subdomain );
-		$controller = !empty($this->p->controller) ? $this->p->controller : 'undefined';
-		$action = !empty($this->p->action) ? $this->p->action : 'default';
-		newrelic_name_transaction( $controller."/".$action." (" . $this->p->method . ")" );
+		newrelic_set_appname( $this->route->subdomain );
+		$controller = !empty($this->route->controller) ? $this->route->controller : 'undefined';
+		$action = !empty($this->route->action) ? $this->route->action : 'default';
+		newrelic_name_transaction( $controller."/".$action." (" . $this->route->method . ")" );
 	}
 }

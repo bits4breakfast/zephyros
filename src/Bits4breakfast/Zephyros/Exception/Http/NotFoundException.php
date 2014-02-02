@@ -1,8 +1,8 @@
 <?php
 namespace Bits4breakst\Zephyros\Exception\Http;
 
-class BadRequestException extends HttpException {
+class NotFoundException extends HttpException {
 	public function __construct( $message = "" ) {
-		parent::__construct( $message, 400 );
+		parent::__construct( $message, 404 );
 	}
 }

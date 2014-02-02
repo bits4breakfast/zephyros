@@ -10,21 +10,20 @@ class Cache {
 	const TTL_DAY = 86400;
 	const TTL_TWO_DAYS = 259200;
 	
+	public static $app_id = null;
 	public static $config = null;
-	public static $container = null;
+	public static $memcache = null;
 
 	public static $deleted_keys = [];
-
-	public static $memcache = null;
 	
 	public function __construct( Config $config ) {
 		self::$app_id = $config->get('kernel.app_id');
 
-		self::$memcache = new \Memcached( $this->config->get('memcache.connection_id') );
+		self::$memcache = new \Memcached( $config->get('memcache.connection_id') );
 		self::$memcache->setOption( \Memcached::OPT_COMPRESSION, false );
 		$servers_list = self::$memcache->getServerList();
 		if ( empty($servers_list) ) {
-			$this->memcache->addServer( $config->get('memcache.url'), $config->get('memcache.port') );
+			self::$memcache->addServer( $config->get('memcache.url'), $config->get('memcache.port') );
 		}
 	}
 	
