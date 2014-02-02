@@ -16,7 +16,11 @@ class Controller {
 	protected $l = null;
 	protected $response = null;
 
-	public function __construct() {
+	public function __construct( Route $route, ServiceContainer $container ) {
+		$this->route = $route;
+		$this->config = $container->config;
+		$this->container = $container;
+
 		if (isset($_SESSION['user_id'])) {
 			$user_class = '\\'.$this->config->get('base.namespace').'\\Model\\'.$this->config->get('authentication.class');
 			$this->user = $user_class::init( $_SESSION['user_id'] );
@@ -27,11 +31,11 @@ class Controller {
 		}
 		
 		$lang = ( isset($_GET['lang']) && trim($_GET['lang']) != '' && strlen($_GET['lang']) == 2 ? $_GET['lang'] : 'en' );
-		$allowed_languages = $this->config->get('allowed_languages');
+		$allowed_languages = $container->config()->get('allowed_languages');
 		if ( $allowed_languages === NULL || ($allowed_languages && !in_array($lang, $allowed_languages))) {
 			$lang = 'en';
 		}
-		$this->db = Mysql::init();
+		$this->db = Mysql::init( $container );
 		$this->l = new LanguageManager( $lang );
 	}
 

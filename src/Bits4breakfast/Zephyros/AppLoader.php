@@ -40,10 +40,7 @@ final class AppLoader {
 
 		if ( file_exists($this->app_base_path.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
 			$controller = implode('\\', $controller);
-			$controller = new $controller;
-			$controller->config = $config;
-			$controller->container = $container;
-			$controller->route = $this->route;
+			$controller = new $controller($this->route, $container, $config);
 			$controller->render();
 		} else {
 			\HttpResponse::status( 501 );

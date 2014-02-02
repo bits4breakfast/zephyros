@@ -1,40 +1,40 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-if ( !defined("first") ) {
-	define('first', 0);
-	define('all', 1);
-	define('last', 2);
-	define('random', 3);
-	define('notnull', 'zephyros_ActiveRecord_notnull');
-	define('isnull', 'zephyros_ActiveRecord_isnull');
-	define('now', 'zephyros_ActiveRecord_now');
-	define('current_date', 'zephyros_ActiveRecord_current_date');
-}
-
 class Mysql {
+
+	const first = 0;
+	const all = 1;
+	const last = 2;
+	const random = 3;
+	const notnull = 'zephyros_ActiveRecord_notnull';
+	const isnull = 'zephyros_ActiveRecord_isnull';
+	const now = 'zephyros_ActiveRecord_now';
+	const current_date = 'zephyros_ActiveRecord_current_date';
 
 	private static $instances = array();
 	private static $now = null;
 
 	private $connections = array();
+	private $container = null;
 
 	private $use_shard = '';
 
 	private $cache = array();
 
-	public function __construct() {
-		$shards = array_keys(\Config::$shards);
+	public function __construct( ServiceContainer $container ) {
+		$shards = array_keys((array)$container->config()->get('database.shards'));
 		$this->use_shard = $shards[0];
+		$this->container = $container;
 
 		$this->connect('read');
 	}
 
-	public static function init() {
-		$hash = md5( getmypid() . \Config::DB_USER . \Config::DB_PASSWORD . \Config::DB_DATABASE );
+	public static function init( ServiceContainer $container ) {
+		$hash = md5( getmypid() . $container->config()->get('database.username') . $container->config()->get('database.password') . $container->config()->get('database.database') );
 
 		if ( !isset(self::$instances[$hash]) )
-			self::$instances[$hash] = new \zephyros\Mysql();
+			self::$instances[$hash] = new Mysql($container);
 
 		return self::$instances[$hash];
 	}
@@ -56,17 +56,18 @@ class Mysql {
 	}
 
 	public function connect( $read_or_write ) {
-		$host = \Config::$shards[$this->use_shard]['master'];
+		$available_shards = $this->container->config()->get('database.shards');
+		$host = $available_shards[$this->use_shard]['master'];
 		
-		if ( $read_or_write == 'read' && isset(\Config::$shards[$this->use_shard]['replicas']) && !empty(\Config::$shards[$this->use_shard]['replicas']) ) {
-			shuffle( \Config::$shards[$this->use_shard]['replicas'] );
-			$replicas = array_merge( array( $host ), \Config::$shards[$this->use_shard]['replicas'] );
+		if ( $read_or_write == 'read' && isset($available_shards[$this->use_shard]['replicas']) && !empty($available_shards[$this->use_shard]['replicas']) ) {
+			shuffle($available_shards[$this->use_shard]['replicas'] );
+			$replicas = array_merge( array( $host ), $available_shards[$this->use_shard]['replicas'] );
 			$host = $replicas[rand(0,count($replicas)-1)];
 		}
 
-		$database = ( isset(\Config::$shards[$this->use_shard]['database']) ? \Config::$shards[$this->use_shard]['database'] : \Config::DB_DATABASE );
+		$database = ( isset($available_shards[$this->use_shard]['database']) ? $available_shards[$this->use_shard]['database'] : $this->container->config()->get('database.database') );
 		
-		$this->connections[$this->use_shard][$read_or_write] = new \mysqli( $host, \Config::DB_USER, \Config::DB_PASSWORD, $database );
+		$this->connections[$this->use_shard][$read_or_write] = new \mysqli( $host, $this->container->config()->get('database.username'), $this->container->config()->get('database.password'), $database );
 		$this->connections[$this->use_shard][$read_or_write]->set_charset( 'utf8' );
 	}
 
