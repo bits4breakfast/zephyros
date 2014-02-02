@@ -22,7 +22,7 @@ class Controller {
 		$this->container = $container;
 
 		if (isset($_SESSION['user_id'])) {
-			$user_class = '\\'.$this->config->get('base.namespace').'\\Model\\'.$this->config->get('authentication.class');
+			$user_class = '\\'.$this->container->config()->get('base.namespace').'\\Model\\'.$this->container->config()->get('authentication.class');
 			$this->user = $user_class::init( $_SESSION['user_id'] );
 		}
 
@@ -62,8 +62,8 @@ class Controller {
 		$this->db->general_rollback();
 		\HttpResponse::status( $error_code );
 		if ( $this->route->format == 'html' ) {
-			if ($this->config->get('errors.rescue_page')) {
-				$fully_qualified_name = '\\'.$this->config->get('base.namespace').'\\UI\\'.$this->route->subdomain.'\\Errors';
+			if ($this->container->config()->get('errors.rescue_page')) {
+				$fully_qualified_name = '\\'.$this->container->config()->get('base.namespace').'\\UI\\'.$this->route->subdomain.'\\Errors';
 				$this->response = new $fully_qualified_name();
 				$this->response->error_code = $error_code;
 				$this->generate_output();
