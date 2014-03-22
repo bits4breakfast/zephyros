@@ -10,14 +10,14 @@ abstract class UserInterface {
 	protected $l = null;
 	protected $p = null;
 	protected $user = null;
-	protected $config = array();
-	protected $data = array();
+	protected $config =null;
+	protected $data = [];
 
-	protected $metaTags = array();
-	protected $opengraph = array();
-	protected $stylesheets = array();
-	protected $scripts = array();
-	protected $templates = array();
+	protected $metaTags = [];
+	protected $opengraph = [];
+	protected $stylesheets = [];
+	protected $scripts = [];
+	protected $templates = [];
 
 	protected $mobile = false;
 	
@@ -29,8 +29,8 @@ abstract class UserInterface {
 		$smarty = new \Smarty;
 		$smarty->setTemplateDir( 
 			array(
-				\Config::BASE_PATH.'/application/templates/'.\Config::SUBDOMAIN,
-				\Config::BASE_PATH.'/application/templates/shared'
+				$this->app_base_path.'/src/templates/'.\Config::SUBDOMAIN,
+				$this->app_base_path.'/src/templates/shared'
 			) 
 		)
 		->setCompileDir( \Config::CACHE_PATH.'/smarty' )
@@ -39,18 +39,18 @@ abstract class UserInterface {
 		return $smarty;
 	}
 	
-	final public function setRoute( \zephyros\RouteParameters $p ) {
+	final public function set_route( Route $p ) {
 		$this->p = $p;
 		$this->smarty->assign( 'p', $p );
 	}
 	
-	final public function setLanguageManager( \ehbox\core\LanguageManager $l ) {
+	final public function set_language_manager( LanguageManager $l ) {
 		$this->l = $l;
 		$this->smarty->assign( 'l', $l );
 		$this->data['lang'] = $l->lang;
 	}
 
-	final public function setUser( $user ) {
+	final public function set_user( $user ) {
 		$this->user = $user;
 		$this->smarty->assign( 'user', $user );
 		if ( $user ) {
@@ -91,7 +91,7 @@ abstract class UserInterface {
 	}
 	
 	final public function is_cached() {
-		return \zephyros\Cache::exists( $this->cache_key() );
+		return Cache::exists( $this->cache_key() );
 	}
 	
 	public function cache_key() {
@@ -102,7 +102,7 @@ abstract class UserInterface {
 		if ( $this->allow_caching ) {
 			$key = $this->cache_key();
 		
-			$output = \zephyros\Cache::get( $key );
+			$output = Cache::get( $key );
 			
 			if ( $output === false ) {
 				$this->build();

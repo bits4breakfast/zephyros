@@ -11,7 +11,7 @@ final class AppLoader {
 
 	private $controller = null;
 
-	public function __construct($subdomain = 'www') {
+	public function __construct($subdomain = 'Frontend') {
 		ob_start();
 		session_start();
 
@@ -19,7 +19,7 @@ final class AppLoader {
 			throw new \InvalidArgumentException( '$subdomain cannot be an empty string' );
 		}
 
-		$this->app_base_path = realpath(getcwd().'/../..');
+		$this->app_base_path = realpath(getcwd().'/../../..');
 
 		$this->route = new Route;
 		$this->route->subdomain = $subdomain;
@@ -38,7 +38,7 @@ final class AppLoader {
 		$router = new Router($this->route, $config);
 		$controller = $router->route();
 
-		if ( file_exists($this->app_base_path.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
+		if ( file_exists($this->app_base_path.'/src/'.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
 			$controller = implode('\\', $controller);
 			$controller = new $controller($this->route, $container, $config);
 			$controller->render();
@@ -47,7 +47,7 @@ final class AppLoader {
 			\HttpResponse::status( 501 );
 		}
 
-		if (extension_loaded ('newrelic')) {
+		if (extension_loaded('newrelic')) {
 			$this->track_with_newrelic();
 		}
 	}

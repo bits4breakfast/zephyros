@@ -5,6 +5,15 @@ use Bits4breakfast\Zephyros\Mysql;
 use Bits4breakfast\Zephyros\Inflector;
 
 abstract class ActiveRecord {
+
+	const first = 0;
+	const all = 1;
+	const last = 2;
+	const random = 3;
+	const notnull = 'zephyros_ActiveRecord_notnull';
+	const isnull = 'zephyros_ActiveRecord_isnull';
+	const now = 'zephyros_ActiveRecord_now';
+	const current_date = 'zephyros_ActiveRecord_current_date';
 	
 	// Object setup
 	protected static $instances = [];
@@ -24,6 +33,8 @@ abstract class ActiveRecord {
 	protected $_data = [];
 	protected $_related = [];
 	protected $_localized = [];
+
+	protected $_encrypt = [];
 
 	public function __construct( $id = NULL, $load = true, $strict = false ) {
 		if ( isset($this->shard) && trim($this->shard) != '' ) {

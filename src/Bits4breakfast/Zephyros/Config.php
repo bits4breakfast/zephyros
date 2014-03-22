@@ -19,8 +19,8 @@ class Config {
 		$key = $this->app_base_path.':'.$this->subdomain.':config';
 		if ( ($this->configuration = apc_fetch($key) ) === false ) {
 			foreach ( ['', '_'.$this->environment, '_'.$this->subdomain] as $prefix) {
-				if ( file_exists($this->app_base_path.'/config/config'.$prefix.'.json') ) {
-					$configuration = json_decode( file_get_contents($this->app_base_path.'/config/config'.$prefix.'.json'), true );
+				if ( file_exists($this->app_base_path.'/App/config/config'.$prefix.'.json') ) {
+					$configuration = json_decode( file_get_contents($this->app_base_path.'/App/config/config'.$prefix.'.json'), true );
 					foreach ($configuration as $key => $value) {
 						$this->configuration[$key] = $value;
 					}
