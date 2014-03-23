@@ -18,8 +18,6 @@ abstract class UserInterface {
 	protected $scripts = [];
 	protected $templates = [];
 
-	protected $mobile = false;
-
 	final private function init_smarty() {
 		$config = $this->container->config();
 		$folder = implode(DIRECTORY_SEPARATOR, explode('\\', $this->config->get('kernel.namespace')));
