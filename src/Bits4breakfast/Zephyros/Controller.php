@@ -97,13 +97,13 @@ class Controller {
 		} else {
 			if ($this->route->method == "GET" && in_array("retrieve", $classMethods)) {
 				$this->route->method = 'retrieve';
-				$this->retrieve();
+				$this->retrieve($this->route->id);
 			} else if ($this->route->method == "DELETE" && in_array("delete", $classMethods)) {
 				$this->route->method = 'delete';
-				$this->delete();
+				$this->delete($this->route->id);
 			} else if ($this->route->method == 'POST' && in_array("save", $classMethods)) {
 				$this->route->method = 'save';
-				$this->save();
+				$this->save($this->route->id);
 			} else {
 				throw new NotImplementedException();
 			}
