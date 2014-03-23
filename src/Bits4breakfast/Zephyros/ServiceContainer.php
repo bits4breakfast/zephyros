@@ -5,9 +5,18 @@ use Monolog\Logger;
 
 class ServiceContainer {
 
+	private $instance = null;
 	private $services = [];
 
-	public function __construct( Config $config ) {
+	public static function init( Config $config = null ) {
+		if ( $config == null && self::$instance == null ) {
+			throw new \InvalidArgumentException( 'config instance cannot be a null reference' );
+		}
+
+		self::$instance = new ServiceContainer( $config  );
+	}
+
+	private function __construct( Config $config ) {
 		$this->register('bits4brekfast.zephyros.config', $config );
 		$this->register('bits4brekfast.zephyros.logger', new Logger( 'bits4brekfast.zephyros.logger' ) );
 		$this->register('bits4brekfast.zephyros.cache', new Cache( $this ) );

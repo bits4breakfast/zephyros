@@ -33,7 +33,7 @@ final class AppLoader {
 		}
 
 		$config = new Config($this->app_base_path, $this->route->subdomain, $this->environemnt);
-		$container = new ServiceContainer($config);
+		$container = ServiceContainer::get($config);
 
 		$router = new Router($this->route, $config);
 		$controller = $router->route();

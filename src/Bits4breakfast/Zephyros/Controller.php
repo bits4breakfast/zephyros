@@ -16,13 +16,16 @@ class Controller {
 	protected $l = null;
 	protected $response = null;
 
-	public function __construct( Route $route, ServiceContainer $container ) {
-		$this->route = $route;
-		$this->config = $container->config();
+	public function __construct(Route $route, ServiceContainer $container) {
 		$this->container = $container;
 
+		$this->db = $container->db();
+		$this->route = $route;
+		$this->config = $container->config();
+		$this->l = $container->lm();
+
 		if (isset($_SESSION['user_id'])) {
-			$user_class = '\\'.$this->container->config()->get('kernel.namespace').'\\Model\\'.$this->container->config()->get('authentication.class');
+			$user_class = '\\'.$container->config()->get('kernel.namespace').'\\Model\\'.$container->config()->get('authentication.class');
 			$this->user = $user_class::init( $_SESSION['user_id'] );
 		}
 
@@ -35,22 +38,22 @@ class Controller {
 		if ( $allowed_languages === NULL || ($allowed_languages && !in_array($lang, $allowed_languages))) {
 			$lang = 'en';
 		}
-		$container->lm()->set_language( $lang );
-		$this->db = $container->db();
+
+		$this->l->set_language( $lang );
 	}
 
 	public function render() {
 		try {
 			$class_methods = get_class_methods($this);
-			if ( in_array($this->route->action, $class_methods ) ) {
+			if (in_array($this->route->action, $class_methods)) {
 				$this->{$this->route->action}();
-			} else if ( in_array("_default", $class_methods) ) {
+			} else if (in_array("_default", $class_methods)) {
 				$this->_default();
 			} else {
 				throw new NotFoundException();
 			}
 		} catch ( HttpException $e ) {
-			$this->_render_error($e->getCode(),$e->getMessage(),$e->getPayload());
+			$this->_render_error($e->getCode(), $e->getMessage(), $e->getPayload());
 		} catch ( \Exception $e ) {
 			$this->_render_error(500);
 		}
@@ -76,29 +79,29 @@ class Controller {
 	final protected function _default() {
 		$classMethods = get_class_methods($this);
 
-		if ( $this->route->action != '' && $this->route->id == '' ) {
+		if ($this->route->action != '' && $this->route->id == '') {
 			$this->route->id = $this->route->action;
 			$this->route->action = '';
 		}
 
-		if ( $this->route->id === 0 || $this->route->id === '' ) {
-			if ( $this->route->method == "GET" && in_array("index", $classMethods) ) {
+		if ($this->route->id === 0 || $this->route->id === '') {
+			if ($this->route->method == "GET" && in_array("index", $classMethods)) {
 				$this->route->method = 'index';
 				$this->index();
-			} else if ( ( $this->route->method == 'PUT' || $this->route->method == 'POST' ) && in_array("save", $classMethods) ) {
+			} else if (($this->route->method == 'PUT' || $this->route->method == 'POST') && in_array("save", $classMethods)) {
 				$this->route->method = 'save';
 				$this->save();
 			} else {
 				throw new NotImplementedException();
 			}
 		} else {
-			if ( $this->route->method == "GET" && in_array("retrieve", $classMethods) ) {
+			if ($this->route->method == "GET" && in_array("retrieve", $classMethods)) {
 				$this->route->method = 'retrieve';
 				$this->retrieve();
-			} else if ( $this->route->method == "DELETE" && in_array("delete", $classMethods) ) {
+			} else if ($this->route->method == "DELETE" && in_array("delete", $classMethods)) {
 				$this->route->method = 'delete';
 				$this->delete();
-			} else if ( $this->route->method == 'POST' && in_array("save", $classMethods) ) {
+			} else if ($this->route->method == 'POST' && in_array("save", $classMethods)) {
 				$this->route->method = 'save';
 				$this->save();
 			} else {
@@ -107,7 +110,7 @@ class Controller {
 		}
 	}
 
-	protected function preventCaching() {
+	protected function prevent_caching() {
 		header("ETag: PUB" . time());
 		header("Last-Modified: " . gmdate("D, d M Y H:i:s", time()-1000) . " GMT");
 		header("Expires: " . gmdate("D, d M Y H:i:s", time() - 100) . " GMT");
