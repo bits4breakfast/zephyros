@@ -29,13 +29,13 @@ abstract class UserInterface {
 		$smarty = new \Smarty;
 		$smarty->setTemplateDir( 
 			array(
-				$this->app_base_path.'/src/templates/'.\Config::SUBDOMAIN,
-				$this->app_base_path.'/src/templates/shared'
+				$this->config->app_base_path.'/src/'.implode(DIRECTORY_SEPARATOR, explode('\\', $this->config->get('kernel.namespace'))).'/'.$this->config->subdomain,
+				$this->config->app_base_path.'/src/templates/shared'
 			) 
 		)
-		->setCompileDir( \Config::CACHE_PATH.'/smarty' )
-		->setCacheDir( \Config::CACHE_PATH.'/smarty' )
-		->compile_check = \Config::SMARTY_COMPILE_CHECK;
+		->setCompileDir( $this->config->get('smarty.cache_path') )
+		->setCacheDir( $this->config->get('smarty.cache_path') )
+		->compile_check = $this->config->get('smarty.compile_check');
 		return $smarty;
 	}
 	
@@ -50,13 +50,17 @@ abstract class UserInterface {
 		$this->data['lang'] = $l->lang;
 	}
 
-	final public function set_user( $user ) {
+	final public function set_user( $user = null ) {
 		$this->user = $user;
 		$this->smarty->assign( 'user', $user );
 		if ( $user ) {
 			$this->data['user_id'] = (int) $user->id;
 			$this->data['username'] = $user->username;
 		}
+	}
+
+	final public function set_config( Config $config ) {
+		$this->config = $config;
 	}
 
 	final public function set($key, $value) {

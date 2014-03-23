@@ -38,7 +38,7 @@ final class AppLoader {
 		$router = new Router($this->route, $config);
 		$controller = $router->route();
 
-		if ( file_exists($this->app_base_path.'/src/'.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
+		if ( file_exists($config->app_base_path.'/src/'.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
 			$controller = implode('\\', $controller);
 			$controller = new $controller($this->route, $container, $config);
 			$controller->render();

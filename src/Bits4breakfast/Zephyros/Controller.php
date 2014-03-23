@@ -22,7 +22,7 @@ class Controller {
 		$this->container = $container;
 
 		if (isset($_SESSION['user_id'])) {
-			$user_class = '\\'.$this->container->config()->get('base.namespace').'\\Model\\'.$this->container->config()->get('authentication.class');
+			$user_class = '\\'.$this->container->config()->get('kernel.namespace').'\\Model\\'.$this->container->config()->get('authentication.class');
 			$this->user = $user_class::init( $_SESSION['user_id'] );
 		}
 
@@ -31,11 +31,11 @@ class Controller {
 		}
 		
 		$lang = ( isset($_GET['lang']) && trim($_GET['lang']) != '' && strlen($_GET['lang']) == 2 ? $_GET['lang'] : 'en' );
-		$allowed_languages = $container->config()->get('allowed_languages');
+		$allowed_languages = $container->config()->get('kernel.allowed_languages');
 		if ( $allowed_languages === NULL || ($allowed_languages && !in_array($lang, $allowed_languages))) {
 			$lang = 'en';
 		}
-		$this->l = new LanguageManager($container, $lang);
+		$container->lm()->set_language( $lang );
 		$this->db = Mysql::init($container);
 	}
 
@@ -61,7 +61,7 @@ class Controller {
 		\HttpResponse::status( $error_code );
 		if ( $this->route->format == 'html' ) {
 			if ($this->container->config()->get('errors.rescue_page')) {
-				$fully_qualified_name = '\\'.$this->container->config()->get('base.namespace').'\\UI\\'.ucfirst(strtolower($this->route->subdomain)).'\\ErrorPage';
+				$fully_qualified_name = '\\'.$this->container->config()->get('kernel.namespace').'\\UI\\'.ucfirst(strtolower($this->route->subdomain)).'\\ErrorPage';
 				$this->response = new $fully_qualified_name();
 				$this->response->error_code = $error_code;
 				$this->response->message = $message;
@@ -148,10 +148,9 @@ class Controller {
 			if (is_string($this->response)) {
 				echo $this->response;
 			} else if ($this->response instanceof UserInterface) {
-				$this->response->l = $this->l;
-				$this->response->route = $this->route;
-				$this->response->user = $this->user;
-				$this->response->config = $this->config;
+				$this->response->set_container( $this->container );
+				$this->response->set_route( $this->route );
+				$this->response->set_user( $this->user );
 				echo $this->response->output();
 			} else if (is_array($this->response) && !empty($this->response['code'])) {
 				echo '<h1>Error: #'.$this->response['code'].'</h1>';

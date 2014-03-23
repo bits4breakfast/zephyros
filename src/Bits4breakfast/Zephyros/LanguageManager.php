@@ -11,21 +11,11 @@ class LanguageManager {
 	protected $cache = [];
 	
 	
-	public function __construct(ServiceContainer $container, $lang = 'en') {
-		$this->db = Mysql::init($container);
-		
-		$this->lang = strtoupper($lang);
+	public function __construct(ServiceContainer $container) {
+		$this->db = $container->db();
 	}
 	
-	public static function init(ServiceContainer $container, $lang = 'en') {
-		
-		if( !isset(self::$instances[$lang]) )
-			self::$instances[$lang] = new LanguageManager($container, $lang);
-		
-		return self::$instances[$lang];
-	}
-	
-	public function setLanguage( $lang ) {
+	public function set_language( $lang ) {
 		$this->lang = strtoupper($lang);
 	}
 	

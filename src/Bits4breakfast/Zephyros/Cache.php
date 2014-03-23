@@ -1,8 +1,6 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-use Bits4breakfast\Zephyros\ServiceBus;
-
 class Cache {
 	
 	const TTL_HALF_HOUR = 1800;
@@ -16,14 +14,16 @@ class Cache {
 
 	public static $deleted_keys = [];
 	
-	public function __construct( Config $config ) {
+	public function __construct( ServiceContainer $container ) {
+		$confing = $container->config();
+
 		self::$app_id = $config->get('kernel.app_id');
 
-		self::$memcache = new \Memcached( $config->get('memcache.connection_id') );
+		self::$memcache = new \Memcached( $config->get('cache.memcache.connection_id') );
 		self::$memcache->setOption( \Memcached::OPT_COMPRESSION, false );
 		$servers_list = self::$memcache->getServerList();
 		if ( empty($servers_list) ) {
-			self::$memcache->addServer( $config->get('memcache.url'), $config->get('memcache.port') );
+			self::$memcache->addServer( $config->get('cache.memcache.url'), $config->get('cache.memcache.port') );
 		}
 	}
 	

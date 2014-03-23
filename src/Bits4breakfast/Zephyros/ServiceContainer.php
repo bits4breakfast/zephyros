@@ -8,20 +8,54 @@ class ServiceContainer {
 	private $services = [];
 
 	public function __construct( Config $config ) {
-		$this->services['bits4brekfast.zephyros.config'] = $config;
-		$this->services['bits4brekfast.zephyros.logger'] = new Logger( 'bits4brekfast.zephyros.logger' );
-		$this->services['bits4brekfast.zephyros.cache'] = new Cache( $config );
+		$this->register('bits4brekfast.zephyros.config', $config );
+		$this->register('bits4brekfast.zephyros.logger', new Logger( 'bits4brekfast.zephyros.logger' ) );
+		$this->register('bits4brekfast.zephyros.cache', new Cache( $this ) );
+		$this->register('bits4brekfast.zephyros.lm', new LanguageManager( $this ) );
+		$this->register('bits4brekfast.zephyros.db', new Mysql( $this ) );
+	}
+
+	public function register( $service_id, $instance ) {
+		if (empty($service_id)) {
+			throw new \InvalidArgumentException( 'service_id cannot be an empty string' );
+		}
+
+		if ($instance == null) {
+			throw new \InvalidArgumentException( 'instance cannot be a null reference' );
+		}
+
+		if (isset($this->services[$service_id])) {
+			throw new \InvalidArgumentException( 'you cannot replace '.$service_id.' with another instance' );	
+		}
+
+		$this->services[$service_id] = $instance;
+
+		return $this;
 	}
 
 	public function get( $service_id ) {
 		if (empty($service_id)) {
-			throw new \InvalidArgumentException( '$service_id cannot be an empty string' );
+			throw new \InvalidArgumentException( 'service_id cannot be an empty string' );
+		}
+
+		if ( isset($this->services[$service_id]) ) {
+			return $this->services[$service_id];
 		}
 
 		switch ( $service_id ) {
 			case 'logger':
 				return $this->logger();
+			case 'cache':
+				return $this->cache();
+			case 'config':
+				return $this->config();
+			case 'lm':
+				return $this->lm();
+			case 'db':
+				return $this->db();
 		}
+
+		throw new \OutOfRangeException( '$service_id was not found' );
 	}
 
 	public function logger() {
@@ -34,5 +68,13 @@ class ServiceContainer {
 
 	public function config() {
 		return $this->services['bits4brekfast.zephyros.config'];
+	}
+
+	public function lm() {
+		return $this->services['bits4brekfast.zephyros.lm'];
+	}
+
+	public function db() {
+		return $this->services['bits4brekfast.zephyros.db'];
 	}
 }
