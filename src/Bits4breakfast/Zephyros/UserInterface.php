@@ -7,10 +7,9 @@ abstract class UserInterface {
 
 	protected $smarty = null;
 	
-	protected $l = null;
-	protected $p = null;
+	protected $container = null;
+	protected $route = null;
 	protected $user = null;
-	protected $config =null;
 	protected $data = [];
 
 	protected $metaTags = [];
@@ -20,31 +19,35 @@ abstract class UserInterface {
 	protected $templates = [];
 
 	protected $mobile = false;
-	
-	public function __construct() {
-		$this->smarty = self::init_smarty();
-	}
-	
-	final public static function init_smarty() {
+
+	final private function init_smarty() {
+		$config = $this->container->config();
+		$folder = implode(DIRECTORY_SEPARATOR, explode('\\', $this->config->get('kernel.namespace')));
+
 		$smarty = new \Smarty;
 		$smarty->setTemplateDir( 
 			array(
-				$this->config->app_base_path.'/src/'.implode(DIRECTORY_SEPARATOR, explode('\\', $this->config->get('kernel.namespace'))).'/'.$this->config->subdomain,
-				$this->config->app_base_path.'/src/templates/shared'
+				$config->app_base_path.'/src/'.$folder.'/templates/'.$config->subdomain,
+				$config->app_base_path.'/src/'.$folder.'templates/shared'
 			) 
 		)
-		->setCompileDir( $this->config->get('smarty.cache_path') )
-		->setCacheDir( $this->config->get('smarty.cache_path') )
-		->compile_check = $this->config->get('smarty.compile_check');
+		->setCompileDir( $config->get('smarty.cache_path') )
+		->setCacheDir( $config->get('smarty.cache_path') )
+		->compile_check = $config->get('smarty.compile_check');
 		return $smarty;
 	}
 	
-	final public function set_route( Route $p ) {
-		$this->p = $p;
-		$this->smarty->assign( 'p', $p );
+	final public function set_route( Route $route ) {
+		$this->route = $route;
+		$this->smarty->assign( 'route', $route );
+	}
+
+	final public function set_container( ServiceContainer $container ) {
+		$this->set_language_manager( $container->lm() );
+		$this->init_smarty();
 	}
 	
-	final public function set_language_manager( LanguageManager $l ) {
+	final private function set_language_manager( LanguageManager $l ) {
 		$this->l = $l;
 		$this->smarty->assign( 'l', $l );
 		$this->data['lang'] = $l->lang;
@@ -57,10 +60,6 @@ abstract class UserInterface {
 			$this->data['user_id'] = (int) $user->id;
 			$this->data['username'] = $user->username;
 		}
-	}
-
-	final public function set_config( Config $config ) {
-		$this->config = $config;
 	}
 
 	final public function set($key, $value) {
@@ -81,7 +80,7 @@ abstract class UserInterface {
 
 	final public function js( $path, $domain = NULL ) {
 		if(!isset($domain)) {
-			$domain = \Config::ASSETS_CDN_URL;
+			$domain = $this->container->config()->get('static_files.assets_cdn_url');
 		}
 		$this->scripts[] = $domain . $path;
 	}
@@ -112,7 +111,7 @@ abstract class UserInterface {
 				$this->build();
 				
 				$this->smarty->assign( 'data', $this->data );
-				$this->smarty->assign( 'config', $this->config );
+				$this->smarty->assign( 'config', $this->container->config() );
 				$this->smarty->assign( 'metaTags', $this->metaTags );
 				$this->smarty->assign( 'opengraph', $this->opengraph );
 				$this->smarty->assign( 'stylesheets', $this->stylesheets );
@@ -122,7 +121,7 @@ abstract class UserInterface {
 				foreach ( $this->templates as $template ) {
 					$output .= $this->smarty->fetch( $template );
 				}
-				\zephyros\Cache::set( $key, $output );
+				Cache::set( $key, $output );
 			}
 			
 			print $output;

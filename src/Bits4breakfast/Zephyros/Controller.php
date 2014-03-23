@@ -36,7 +36,7 @@ class Controller {
 			$lang = 'en';
 		}
 		$container->lm()->set_language( $lang );
-		$this->db = Mysql::init($container);
+		$this->db = $container->db();
 	}
 
 	public function render() {

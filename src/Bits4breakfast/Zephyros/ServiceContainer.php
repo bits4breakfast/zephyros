@@ -12,7 +12,7 @@ class ServiceContainer {
 		$this->register('bits4brekfast.zephyros.logger', new Logger( 'bits4brekfast.zephyros.logger' ) );
 		$this->register('bits4brekfast.zephyros.cache', new Cache( $this ) );
 		$this->register('bits4brekfast.zephyros.lm', new LanguageManager( $this ) );
-		$this->register('bits4brekfast.zephyros.db', new Mysql( $this ) );
+		$this->register('bits4brekfast.zephyros.db', Mysql::init( $this ) );
 	}
 
 	public function register( $service_id, $instance ) {
