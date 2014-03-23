@@ -3,6 +3,7 @@ namespace Bits4breakfast\Zephyros;
 
 use Bits4breakst\Zephyros\Exception\Http\HttpException;
 use Bits4breakst\Zephyros\Exception\Http\NotFoundException;
+use Bits4breakst\Zephyros\Exception\Http\UnauthorizedException;
 use Bits4breakst\Zephyros\Exception\Http\NotImplementedException;
 use Bits4breakst\Zephyros\Exception\Http\InternalServerErrorException;
 
@@ -12,30 +13,30 @@ class Controller {
 	public $route = null;
 
 	protected $db = null;
-	protected $user = null;
 	protected $l = null;
+	protected $user = null;
 	protected $response = null;
 
 	public function __construct(Route $route, ServiceContainer $container) {
-		$this->container = $container;
-
-		$this->db = $container->db();
 		$this->route = $route;
+
+		$this->container = $container;
 		$this->config = $container->config();
+		$this->db = $container->db();
 		$this->l = $container->lm();
 
 		if (isset($_SESSION['user_id'])) {
-			$user_class = '\\'.$container->config()->get('kernel.namespace').'\\Model\\'.$container->config()->get('authentication.class');
+			$user_class = $this->config->get('authentication.class');
 			$this->user = $user_class::init( $_SESSION['user_id'] );
 		}
 
-		if ( $this->route->format == 'json' ) {
+		if ($this->route->format == 'json') {
 			header("Content-type: text/json");
 		}
 		
 		$lang = ( isset($_GET['lang']) && trim($_GET['lang']) != '' && strlen($_GET['lang']) == 2 ? $_GET['lang'] : 'en' );
-		$allowed_languages = $container->config()->get('kernel.allowed_languages');
-		if ( $allowed_languages === NULL || ($allowed_languages && !in_array($lang, $allowed_languages))) {
+		$allowed_languages = $this->config->get('kernel.allowed_languages');
+		if ($allowed_languages === NULL || ($allowed_languages && !in_array($lang, $allowed_languages))) {
 			$lang = 'en';
 		}
 
@@ -44,6 +45,10 @@ class Controller {
 
 	public function render() {
 		try {
+			if ($this->user === null && isset($this->requires_authentication) && $this->requires_authentication) {
+				throw new UnauthorizedException;
+			}
+
 			$class_methods = get_class_methods($this);
 			if (in_array($this->route->action, $class_methods)) {
 				$this->{$this->route->action}();
@@ -77,7 +82,7 @@ class Controller {
 	}
 
 	final protected function _default() {
-		$classMethods = get_class_methods($this);
+		$class_methods = get_class_methods($this);
 
 		if ($this->route->action != '' && $this->route->id == '') {
 			$this->route->id = $this->route->action;
@@ -85,23 +90,23 @@ class Controller {
 		}
 
 		if ($this->route->id === 0 || $this->route->id === '') {
-			if ($this->route->method == "GET" && in_array("index", $classMethods)) {
+			if ($this->route->method == "GET" && in_array("index", $class_methods)) {
 				$this->route->method = 'index';
 				$this->index();
-			} else if (($this->route->method == 'PUT' || $this->route->method == 'POST') && in_array("save", $classMethods)) {
+			} else if (($this->route->method == 'PUT' || $this->route->method == 'POST') && in_array("save", $class_methods)) {
 				$this->route->method = 'save';
 				$this->save();
 			} else {
 				throw new NotImplementedException();
 			}
 		} else {
-			if ($this->route->method == "GET" && in_array("retrieve", $classMethods)) {
+			if ($this->route->method == "GET" && in_array("retrieve", $class_methods)) {
 				$this->route->method = 'retrieve';
 				$this->retrieve($this->route->id);
-			} else if ($this->route->method == "DELETE" && in_array("delete", $classMethods)) {
+			} else if ($this->route->method == "DELETE" && in_array("delete", $class_methods)) {
 				$this->route->method = 'delete';
 				$this->delete($this->route->id);
-			} else if ($this->route->method == 'POST' && in_array("save", $classMethods)) {
+			} else if ($this->route->method == 'POST' && in_array("save", $class_methods)) {
 				$this->route->method = 'save';
 				$this->save($this->route->id);
 			} else {
