@@ -25,8 +25,8 @@ abstract class UserInterface {
 		$smarty = new \Smarty;
 		$smarty->setTemplateDir( 
 			array(
-				$config->app_base_path.'/src/'.$folder.'/templates/'.$config->subdomain,
-				$config->app_base_path.'/src/'.$folder.'templates/shared'
+				$config->app_base_path.'/src/'.$folder.'/Template/'.$config->subdomain,
+				$config->app_base_path.'/src/'.$folder.'/Template/shared'
 			) 
 		)
 		->setCompileDir( $config->get('smarty.cache_path') )
