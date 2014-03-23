@@ -22,6 +22,7 @@ class ServiceContainer {
 		$this->register('bits4brekfast.zephyros.cache', new Cache( $this ) );
 		$this->register('bits4brekfast.zephyros.lm', new LanguageManager( $this ) );
 		$this->register('bits4brekfast.zephyros.db', Mysql::init( $this ) );
+		$this->register('bits4brekfast.zephyros.service_bus', new ServiceBus( $this ) );
 	}
 
 	public function register( $service_id, $instance ) {
@@ -85,5 +86,9 @@ class ServiceContainer {
 
 	public function db() {
 		return $this->services['bits4brekfast.zephyros.db'];
+	}
+
+	public function bus() {
+		return $this->services['bits4brekfast.zephyros.service_bus'];
 	}
 }

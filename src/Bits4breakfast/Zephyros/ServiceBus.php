@@ -1,34 +1,25 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-require_once \Config::AWS_SDK_PATH.'/aws.phar';
-
 use Aws\Common\Aws;
 
 class ServiceBus {
-	protected static $service_bus = null;
+	protected $container = null;
 	protected $sns = null;
 	
-	public function __construct() {
-		if ( !DEV_ENVIRONMENT ) {
-			$this->sns = Aws::factory( \Config::BASE_PATH.'/application/config/aws.config.php' )->get('sns');
-		}
-	}
-	
-	public static function init() {
-		if ( self::$service_bus == null ) {
-			self::$service_bus = new ServiceBus();
-		}
-		
-		return self::$service_bus;
+	public function __construct( ServiceContainer $container ) {
+		$this->container = $container;
 	}
 
-	public static function emit( $event, $payload = null ) {
+	public function emit( $event, $payload = null ) {
+		$config = $this->container->config();
+
 		if ( empty($event) ) {
 			throw new \Exception("Type cannot be empty");
 		}
 			
-		if ( !isset(\Config::$bus_routing_table[$event]) ) {
+		$routing_table = $config->get('service_bus.routing_table');
+		if ( !isset($routing_table[$event]) ) {
 			throw new \Exception(
 				"No topics found for key ".$event.", envelope is in details ".json_encode($payload)
 			);
@@ -39,7 +30,7 @@ class ServiceBus {
 			'payload' => $payload
 		);
 
-		foreach ( \Config::$bus_routing_table[$event] as $topic ) {
+		foreach ( $routing_table[$event] as $topic ) {
 			if ( false && DEV_ENVIRONMENT ) {
 				$id = uniqid();
 	
@@ -63,7 +54,11 @@ class ServiceBus {
 				$file = sprintf("%s/%s.msg", $folder, $id);
 				file_put_contents($file, json_encode($fakeSnsMessage));
 			} else {
-				self::init()->sns->publish( array(
+				if ( $this->sns === null ) {
+					$this->sns = Aws::factory( \Config::BASE_PATH.'/application/config/aws.config.php' )->get('sns');
+				}
+
+				$this->sns->publish( array(
 					'TopicArn' => $topic,
 					'Message' => json_encode($message)
 				));
