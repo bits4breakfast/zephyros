@@ -51,7 +51,10 @@ class Controller {
 
 			$class_methods = get_class_methods($this);
 			if (in_array($this->route->action, $class_methods)) {
-				$this->{$this->route->action}();
+				$response = $this->{$this->route->action}();
+				if ( $this->response === null && $response !== null ) {
+					$this->response('ACK', $response);
+				}
 			} else if (in_array("_default", $class_methods)) {
 				$this->_default();
 			} else {
@@ -92,26 +95,30 @@ class Controller {
 		if ($this->route->id === 0 || $this->route->id === '') {
 			if ($this->route->method == "GET" && in_array("index", $class_methods)) {
 				$this->route->method = 'index';
-				$this->index();
+				$response = $this->index();
 			} else if (($this->route->method == 'PUT' || $this->route->method == 'POST') && in_array("save", $class_methods)) {
 				$this->route->method = 'save';
-				$this->save();
+				$response = $this->save();
 			} else {
 				throw new NotImplementedException();
 			}
 		} else {
 			if ($this->route->method == "GET" && in_array("retrieve", $class_methods)) {
 				$this->route->method = 'retrieve';
-				$this->retrieve($this->route->id);
+				$response = $this->retrieve($this->route->id);
 			} else if ($this->route->method == "DELETE" && in_array("delete", $class_methods)) {
 				$this->route->method = 'delete';
-				$this->delete($this->route->id);
+				$response = $this->delete($this->route->id);
 			} else if ($this->route->method == 'POST' && in_array("save", $class_methods)) {
 				$this->route->method = 'save';
-				$this->save($this->route->id);
+				$response = $this->save($this->route->id);
 			} else {
 				throw new NotImplementedException();
 			}
+		}
+
+		if ( $this->response === null && $response !== null ) {
+			$this->response('ACK', $response);
 		}
 	}
 
