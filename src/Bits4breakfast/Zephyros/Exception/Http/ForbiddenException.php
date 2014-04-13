@@ -9,7 +9,7 @@ namespace Bits4breakst\Zephyros\Exception\Http;
 	resource (e.g., a recognized user attempting to access restricted content).
 */
 class ForbiddenHttpException extends HttpException {
-	public function __construct( $message = "" ) {
-		parent::__construct( $message, 403 );
+	public function __construct( $message = "", $payload = [] ) {
+		parent::__construct( $message, 403, $payload );
 	}
 }

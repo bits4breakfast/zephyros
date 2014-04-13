@@ -6,7 +6,7 @@ namespace Bits4breakst\Zephyros\Exception\Http;
 	specific message is suitable.
 */
 class InternalServerErrorException extends HttpException {
-	public function __construct( $message = "" ) {
-		parent::__construct( $message, 500 );
+	public function __construct( $message = "", $payload = [] ) {
+		parent::__construct( $message, 500, $payload );
 	}
 }

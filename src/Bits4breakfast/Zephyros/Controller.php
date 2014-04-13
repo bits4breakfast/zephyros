@@ -61,7 +61,7 @@ class Controller {
 				throw new NotFoundException();
 			}
 		} catch ( HttpException $e ) {
-			$this->_render_error($e->getCode(), $e->getMessage(), $e->getPayload());
+			$this->_render_error($e->getCode(), $e->getMessage(), $e->payload );
 		} catch ( \Exception $e ) {
 			$this->_render_error(500);
 		}

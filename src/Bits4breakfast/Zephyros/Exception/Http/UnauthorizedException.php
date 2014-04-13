@@ -7,7 +7,7 @@ namespace Bits4breakst\Zephyros\Exception\Http;
 	field containing a challenge applicable to the requested resource.
 */
 class UnauthorizedException extends HttpException {
-	public function __construct( $message = "" ) {
-		parent::__construct( $message, 401 );
+	public function __construct( $message = "", $payload = [] ) {
+		parent::__construct( $message, 401, $payload );
 	}
 }

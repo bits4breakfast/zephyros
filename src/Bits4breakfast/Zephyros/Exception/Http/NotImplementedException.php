@@ -6,7 +6,7 @@ namespace Bits4breakst\Zephyros\Exception\Http;
 	request.[2] Usually this implies future availability (e.g., a new feature of a web-service API).
 */
 class NotImplementedException extends HttpException {
-	public function __construct( $message = "" ) {
-		parent::__construct( $message, 501 );
+	public function __construct( $message = "", $payload = [] ) {
+		parent::__construct( $message, 501, $payload );
 	}
 }
