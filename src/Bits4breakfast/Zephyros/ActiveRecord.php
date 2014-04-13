@@ -469,8 +469,18 @@ abstract class ActiveRecord {
 			}
 		}
 	}
+
+	final public function validate( $validation_schema ) {
+		if ( empty($validation_schema) ) {
+			return true;
+		}
+	}
 	
-	final public function save() {
+	final public function save( $validation_schema = 'default' ) {
+		if ( method_exists( $this, 'validation_schema' ) ) {
+			$this->validate( $this->validation_schema( $validation_schema ) );
+		}
+
 		if ( !empty($this->_data) ) {
 			if ( method_exists( $this, 'before_saving' ) ) {
 				$this->before_saving();
