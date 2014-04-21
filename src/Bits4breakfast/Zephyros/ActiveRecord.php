@@ -467,6 +467,10 @@ abstract class ActiveRecord {
 		}
 	}
 
+	final public function apply_patch( $patch ) {
+		return true;
+	}
+
 	final public function validate( $validation_schema ) {
 		if ( empty($validation_schema) ) {
 			return true;
@@ -587,11 +591,11 @@ abstract class ActiveRecord {
 			foreach ( $this->_related[$key] as $record ) {
 				if ( is_array($record) ) {
 					unset($record[$fk]);
-					$record = array_merge( [$fk => $this->_data['id'] ), $reco ] );
+					$record = array_merge( [$fk => $this->_data['id']], $reco );
 				} else {
 					$record = (array)$record;
 					unset($record[$fk]);
-					$record = array_merge( [ $fk => $this->_data['id']), $reco ] );
+					$record = array_merge( [$fk => $this->_data['id']], $reco );
 				}
 				
 				$this->_db->pick($this->_shard)->insert( $table_name, $record );
