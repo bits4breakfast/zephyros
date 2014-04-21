@@ -13,7 +13,15 @@ class ServiceContainer {
 			throw new \InvalidArgumentException( 'config instance cannot be a null reference' );
 		}
 
+		if (self::$instance) {
+			return self::$instance;
+		}
+
 		self::$instance = new ServiceContainer( $config  );
+	}
+
+	public static function instance() {
+		return self::$instance;
 	}
 
 	private function __construct( Config $config ) {

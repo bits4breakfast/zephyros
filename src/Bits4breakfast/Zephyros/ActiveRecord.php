@@ -1,9 +1,6 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-use Bits4breakfast\Zephyros\Mysql;
-use Bits4breakfast\Zephyros\Inflector;
-
 abstract class ActiveRecord {
 
 	const first = 0;
@@ -40,7 +37,7 @@ abstract class ActiveRecord {
 		if ( isset($this->shard) && trim($this->shard) != '' ) {
 			$this->_shard = $this->shard;
 		} else {
-			$this->_shard = \Config::DEFAULT_SHARD;
+			$this->_shard = ServiceContainer::instance()->config()->get('database.shards.default');
 		}
 
 		$this->_class = get_class( $this );
@@ -327,7 +324,7 @@ abstract class ActiveRecord {
 				$this->before_restoring();
 			}
 			
-			$this->_readCache();
+			$this->read_from_cache();
 			
 			if ( method_exists( $this, 'after_restoring' ) ) {
 				$this->after_restoring();
@@ -461,7 +458,7 @@ abstract class ActiveRecord {
 			}
 			
 			if ( !isset($this->do_not_cache) || ( isset($this->do_not_cache) && !$this->do_not_cache ) ) {
-				$this->_writeCache();
+				$this->write_to_cache();
 			}
 			
 			if ( method_exists( $this, 'after_loading' ) ) {
@@ -620,11 +617,11 @@ abstract class ActiveRecord {
 	}
 	
 	private function _isCached() {
-		return \zephyros\Cache::exists( 'ar:'.$this->_class.':'.$this->_data['id'] );
+		return Cache::exists( 'ar:'.$this->_class.':'.$this->_data['id'] );
 	}
 	
-	private function _readCache() {
-		$obj = \zephyros\Cache::get( 'ar:'.$this->_class.':'.$this->_data['id'] );
+	final public function read_from_cache() {
+		$obj = Cache::get( 'ar:'.$this->_class.':'.$this->_data['id'] );
 		
 		if( $obj === false ) {
 			return;
@@ -637,12 +634,12 @@ abstract class ActiveRecord {
 		}
 	}
 	
-	private function _writeCache() {
-		\zephyros\Cache::set( 'ar:'.$this->_class.':'.$this->_data['id'], $this, 7200 );
+	final public function write_to_cache() {
+		Cache::set( 'ar:'.$this->_class.':'.$this->_data['id'], $this, 7200 );
 	}
 	
-	private function _clearCache() {
-		\zephyros\Cache::delete( 'ar:'.$this->_class.':'.$this->_data['id'] );
+	final public function clear_cache() {
+		Cache::delete( 'ar:'.$this->_class.':'.$this->_data['id'] );
 	}
 	
 	final public function _snapshot() {
