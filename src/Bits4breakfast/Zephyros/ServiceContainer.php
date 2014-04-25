@@ -5,7 +5,7 @@ use Monolog\Logger;
 
 class ServiceContainer {
 
-	private $instance = null;
+	private static $instance = null;
 	private $services = [];
 
 	public static function init( Config $config = null ) {
@@ -27,9 +27,9 @@ class ServiceContainer {
 	private function __construct( Config $config ) {
 		$this->register('bits4brekfast.zephyros.config', $config );
 		$this->register('bits4brekfast.zephyros.logger', new Logger( 'bits4brekfast.zephyros.logger' ) );
+		$this->register('bits4brekfast.zephyros.db', Mysql::init( $this ) );
 		$this->register('bits4brekfast.zephyros.cache', new Cache( $this ) );
 		$this->register('bits4brekfast.zephyros.lm', new LanguageManager( $this ) );
-		$this->register('bits4brekfast.zephyros.db', Mysql::init( $this ) );
 		$this->register('bits4brekfast.zephyros.service_bus', new ServiceBus( $this ) );
 	}
 

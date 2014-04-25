@@ -15,7 +15,7 @@ class Cache {
 	public static $deleted_keys = [];
 	
 	public function __construct( ServiceContainer $container ) {
-		$confing = $container->config();
+		$config = $container->config();
 
 		self::$app_id = $config->get('kernel.app_id');
 
