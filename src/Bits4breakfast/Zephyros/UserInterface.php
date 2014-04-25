@@ -78,7 +78,7 @@ abstract class UserInterface {
 
 	final public function js( $path, $domain = NULL ) {
 		if(!isset($domain)) {
-			$domain = $this->container->config()->get('static_files.assets_cdn_url');
+			$domain = $this->container->config()->get('assets.cdn_url');
 		}
 		$this->scripts[] = $domain . $path;
 	}
@@ -109,7 +109,7 @@ abstract class UserInterface {
 				$this->build();
 				
 				$this->smarty->assign( 'data', $this->data );
-				$this->smarty->assign( 'config', $this->container->config() );
+				$this->smarty->assign( 'config', $this->container->config()->dump() );
 				$this->smarty->assign( 'metaTags', $this->metaTags );
 				$this->smarty->assign( 'opengraph', $this->opengraph );
 				$this->smarty->assign( 'stylesheets', $this->stylesheets );
@@ -128,7 +128,7 @@ abstract class UserInterface {
 			$this->build();
 			
 			$this->smarty->assign( 'data', $this->data );
-			$this->smarty->assign( 'config', $this->config );
+			$this->smarty->assign( 'config', $this->container->config()->dump() );
 			$this->smarty->assign( 'metaTags', $this->metaTags );
 			$this->smarty->assign( 'opengraph', $this->opengraph );
 			$this->smarty->assign( 'stylesheets', $this->stylesheets );

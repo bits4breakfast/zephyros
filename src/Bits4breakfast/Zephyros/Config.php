@@ -38,4 +38,8 @@ class Config {
 
 		return null;
 	}
+
+	public function dump() {
+		return $this->configuration;
+	}
 }
