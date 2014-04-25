@@ -53,10 +53,9 @@ abstract class UserInterface {
 
 	final public function set_user( $user = null ) {
 		$this->user = $user;
-		$this->smarty->assign( 'user', $user );
 		if ( $user ) {
-			$this->data['user_id'] = (int) $user->id;
-			$this->data['username'] = $user->username;
+			$this->data['user'] = $user->dump();
+			$this->smarty->assign( 'user', $this->data['user'] );
 		}
 	}
 
