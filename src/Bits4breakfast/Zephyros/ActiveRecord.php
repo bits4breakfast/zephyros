@@ -37,7 +37,7 @@ abstract class ActiveRecord {
 		if ( isset($this->shard) && trim($this->shard) != '' ) {
 			$this->_shard = $this->shard;
 		} else {
-			$this->_shard = ServiceContainer::instance()->config()->get('database.shards.default');
+			$this->_shard = ServiceContainer::instance()->config()->get('database_shards.default');
 		}
 
 		$this->_class = get_class( $this );

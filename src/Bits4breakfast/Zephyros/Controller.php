@@ -26,7 +26,7 @@ class Controller {
 		$this->l = $container->lm();
 
 		if (isset($_SESSION['user_id'])) {
-			$user_class = $this->config->get('authentication.class');
+			$user_class = $this->config->get('authentication_class');
 			$this->user = $user_class::init( $_SESSION['user_id'] );
 		}
 

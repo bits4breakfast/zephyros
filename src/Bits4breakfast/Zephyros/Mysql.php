@@ -23,7 +23,7 @@ class Mysql {
 	private $cache = array();
 
 	public function __construct( ServiceContainer $container ) {
-		$shards = array_keys((array)$container->config()->get('database.shards'));
+		$shards = array_keys((array)$container->config()->get('database_shards'));
 		$this->use_shard = $shards[0];
 		$this->container = $container;
 
@@ -31,7 +31,7 @@ class Mysql {
 	}
 
 	public static function init( ServiceContainer $container ) {
-		$hash = md5( getmypid() . $container->config()->get('database.username') . $container->config()->get('database.password') . $container->config()->get('database.database') );
+		$hash = md5( getmypid() . $container->config()->get('database_username') . $container->config()->get('database_password') . $container->config()->get('database_database') );
 
 		if ( !isset(self::$instances[$hash]) )
 			self::$instances[$hash] = new Mysql($container);
@@ -56,7 +56,7 @@ class Mysql {
 	}
 
 	public function connect( $read_or_write ) {
-		$available_shards = $this->container->config()->get('database.shards');
+		$available_shards = $this->container->config()->get('database_shards');
 		$host = $available_shards[$this->use_shard]['master'];
 		
 		if ( $read_or_write == 'read' && isset($available_shards[$this->use_shard]['replicas']) && !empty($available_shards[$this->use_shard]['replicas']) ) {
@@ -65,9 +65,9 @@ class Mysql {
 			$host = $replicas[rand(0,count($replicas)-1)];
 		}
 
-		$database = ( isset($available_shards[$this->use_shard]['database']) ? $available_shards[$this->use_shard]['database'] : $this->container->config()->get('database.database') );
+		$database = ( isset($available_shards[$this->use_shard]['database']) ? $available_shards[$this->use_shard]['database'] : $this->container->config()->get('database_database') );
 		
-		$this->connections[$this->use_shard][$read_or_write] = new \mysqli( $host, $this->container->config()->get('database.username'), $this->container->config()->get('database.password'), $database );
+		$this->connections[$this->use_shard][$read_or_write] = new \mysqli( $host, $this->container->config()->get('database_username'), $this->container->config()->get('database_password'), $database );
 		$this->connections[$this->use_shard][$read_or_write]->set_charset( 'utf8' );
 	}
 
