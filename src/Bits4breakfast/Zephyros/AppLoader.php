@@ -40,7 +40,7 @@ final class AppLoader {
 
 		if ( file_exists($config->app_base_path.'/src/'.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
 			$controller = implode('\\', $controller);
-			$controller = new $controller($this->route, $container, $config);
+			$controller = new $controller($this->route, $container);
 			$controller->render();
 			$controller->shutdown();
 		} else {
