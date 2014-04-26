@@ -166,6 +166,9 @@ class Controller {
 				$this->response->set_container( $this->container );
 				$this->response->set_route( $this->route );
 				$this->response->set_user( $this->user );
+				if ( method_exists($this->response, 'init') ) {
+					$this->response->init();
+				}
 				echo $this->response->output();
 			} else if (is_array($this->response) && !empty($this->response['code'])) {
 				echo '<h1>Error: #'.$this->response['code'].'</h1>';

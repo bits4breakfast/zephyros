@@ -18,20 +18,20 @@ abstract class UserInterface {
 	protected $scripts = [];
 	protected $templates = [];
 
-	final private function init_smarty() {
+	final public function init_smarty() {
 		$config = $this->container->config();
-		$folder = implode(DIRECTORY_SEPARATOR, explode('\\', $this->config->get('kernel.namespace')));
+		$folder = implode(DIRECTORY_SEPARATOR, explode('\\', $config->get('kernel_namespace')));
 
 		$smarty = new \Smarty;
 		$smarty->setTemplateDir( 
 			array(
 				$config->app_base_path.'/src/'.$folder.'/Template/'.$config->subdomain,
-				$config->app_base_path.'/src/'.$folder.'/Template/shared'
+				$config->app_base_path.'/src/'.$folder.'/Template'
 			) 
 		)
-		->setCompileDir( $config->get('smarty.cache_path') )
-		->setCacheDir( $config->get('smarty.cache_path') )
-		->compile_check = $config->get('smarty.compile_check');
+		->setCompileDir( $config->get('smarty_cache_path') )
+		->setCacheDir( $config->get('smarty_cache_path') )
+		->compile_check = $config->get('smarty_compile_check');
 		return $smarty;
 	}
 	
@@ -41,8 +41,9 @@ abstract class UserInterface {
 	}
 
 	final public function set_container( ServiceContainer $container ) {
+		$this->container = $container;
+		$this->smarty = $this->init_smarty();
 		$this->set_language_manager( $container->lm() );
-		$this->init_smarty();
 	}
 	
 	final private function set_language_manager( LanguageManager $l ) {
@@ -55,8 +56,11 @@ abstract class UserInterface {
 		$this->user = $user;
 		if ( $user ) {
 			$this->data['user'] = $user->dump();
-			$this->smarty->assign( 'user', $this->data['user'] );
+		} else {
+			$this->data['user'] = null;
 		}
+
+		$this->smarty->assign( 'user', $this->data['user'] );
 	}
 
 	final public function set($key, $value) {
@@ -72,12 +76,12 @@ abstract class UserInterface {
 	}
 
 	final public function css( $path ) {
-		$this->stylesheets[] = \Config::ASSETS_CDN_URL . $path;
+		$this->stylesheets[] = $this->container->config()->get('assets_cdn_url') . $path;
 	}
 
 	final public function js( $path, $domain = NULL ) {
 		if(!isset($domain)) {
-			$domain = $this->container->config()->get('assets.cdn_url');
+			$domain = $this->container->config()->get('assets_cdn_url');
 		}
 		$this->scripts[] = $domain . $path;
 	}
