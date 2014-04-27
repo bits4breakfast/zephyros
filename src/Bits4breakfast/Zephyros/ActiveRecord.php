@@ -1,6 +1,8 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
+use Bits4breakst\Zephyros\Exception\Http\BadRequestException;
+
 abstract class ActiveRecord {
 
 	const first = 0;
@@ -37,7 +39,7 @@ abstract class ActiveRecord {
 		if ( isset($this->shard) && trim($this->shard) != '' ) {
 			$this->_shard = $this->shard;
 		} else {
-			$this->_shard = ServiceContainer::instance()->config()->get('database_shards.default');
+			$this->_shard = ServiceContainer::instance()->config()->get('database_shards_default');
 		}
 
 		$this->_class = get_class( $this );
@@ -467,21 +469,38 @@ abstract class ActiveRecord {
 		}
 	}
 
-	final public function apply_patch( $patch ) {
-		return true;
+	final public function apply_patch( $patch, $patching_schema = 'default' ) {
+		$patching_schema = $this->patching_schema( $patching_schema );
+		if (empty($patching_schema)) {
+			throw new BadRequestException;
+		}
+
+		$attributes_not_matched = [];
+		foreach ( $this->patching_schemas[$patching_schema] as $key => $details ) {
+			if ( !isset($patch[$key]) ) {
+				$attributes_not_matched[] = $key;
+			} else {
+				$this->_data[$key] = $patch[$key];
+			}
+		}
+
+		if (!empty($attributes_not_matched)) {
+			throw new BadRequestException( '', $attributes_not_matched );
+		} 
 	}
 
-	final public function validate( $validation_schema ) {
+	final public function validate( $validation_schema = 'default' ) {
+		$validation_schema = $this->validation_schema( $validation_schema );
 		if ( empty($validation_schema) ) {
-			return true;
+			return null;
 		}
+
+		$errors = [];
+
+		return $errors;
 	}
 	
-	final public function save( $validation_schema = 'default' ) {
-		if ( method_exists( $this, 'validation_schema' ) ) {
-			$this->validate( $this->validation_schema( $validation_schema ) );
-		}
-
+	final public function save() {
 		if ( !empty($this->_data) ) {
 			if ( method_exists( $this, 'before_saving' ) ) {
 				$this->before_saving();
