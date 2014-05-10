@@ -18,6 +18,7 @@ abstract class ActiveRecord {
 	protected static $instances = [];
 
 	protected $_db = null;
+	protected $_container = null;
 
 	protected $_shard = null;
 	protected $_database = '';
@@ -36,10 +37,12 @@ abstract class ActiveRecord {
 	protected $_encrypt = [];
 
 	public function __construct( $id = NULL, $load = true, $strict = false ) {
+		$this->_container = ServiceContainer::instance();
+
 		if ( isset($this->shard) && trim($this->shard) != '' ) {
 			$this->_shard = $this->shard;
 		} else {
-			$this->_shard = ServiceContainer::instance()->config()->get('database_shards_default');
+			$this->_shard = $this->_container->config()->get('database_shards_default');
 		}
 
 		$this->_class = get_class( $this );
@@ -52,7 +55,7 @@ abstract class ActiveRecord {
 			$this->_table = $this->_name;
 		}
 
-		$this->_db = Mysql::init();
+		$this->_db = Mysql::init($thi->_container);
 		$this->_table = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$this->_table;
 		
 		if ( $id !== NULL ) {
@@ -212,7 +215,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init();
+		$db = Mysql::init($thi->_container);
 
 		if ( is_string($conditions) ) {
 			$query = $conditions;	
@@ -297,7 +300,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init();
+		$db = Mysql::init($thi->_container);
 
 		$query = '';
 		foreach ( $conditions as $field => $value ) {
