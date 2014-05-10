@@ -55,7 +55,7 @@ abstract class ActiveRecord {
 			$this->_table = $this->_name;
 		}
 
-		$this->_db = Mysql::init($thi->_container);
+		$this->_db = Mysql::init($this->_container);
 		$this->_table = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$this->_table;
 		
 		if ( $id !== NULL ) {
@@ -215,7 +215,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init($thi->_container);
+		$db = Mysql::init($this->_container);
 
 		if ( is_string($conditions) ) {
 			$query = $conditions;	
@@ -300,7 +300,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init($thi->_container);
+		$db = Mysql::init($this->_container);
 
 		$query = '';
 		foreach ( $conditions as $field => $value ) {
