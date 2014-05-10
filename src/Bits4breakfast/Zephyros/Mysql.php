@@ -91,7 +91,7 @@ class Mysql {
 		$timeEnd = microtime();
 
 		if ( $result === false ) {
-			new \Exception(
+			throw new \Exception(
 				sprintf( 'Database error n° %s: %s.', $handler->errno, $handler->error. " SQL=$query" )
 			);
 		} else {
@@ -106,13 +106,13 @@ class Mysql {
 			$this->connect( 'write' );
 		}
 
-		$timeStart = microtime( true );
+		$timeStart = microtime(true);
 		$result = $this->connections[$this->use_shard]['write']->query( $query );
-		$timeEnd = microtime( true );
+		$timeEnd = microtime(true);
 
 		if ( $result === false ) {
-				new \Exception(
-					sprintf( 'Database error n° %s: %s.', $this->connections[$this->use_shard]['write']->errno, $this->connections[$this->use_shard]['write']->error. " SQL=$query" )
+				throw new \Exception(
+					sprintf( 'Database error n° %s: %s.', $this->connections[$this->use_shard]['write']->errno, $this->connections[$this->use_shard]['write']->error. " SQL=".$query )
 				);
 		} else {
 			$this->container->logger()->info( round(($timeEnd - $timeStart) * 1000, 0).': '.$query );

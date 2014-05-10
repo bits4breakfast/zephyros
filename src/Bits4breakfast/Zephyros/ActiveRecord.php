@@ -478,7 +478,7 @@ abstract class ActiveRecord {
 			throw new BadRequestException;
 		}
 
-		foreach ( $patching_schema as $key => $details ) {
+		foreach ( $patching_schema as $key ) {
 			if ( isset($patch[$key]) ) {
 				$this->_data[$key] = $patch[$key];
 			}
