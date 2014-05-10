@@ -91,13 +91,11 @@ class Mysql {
 		$timeEnd = microtime();
 
 		if ( $result === false ) {
-			\zephyros\Logger::logException(
-				new \Exception(
-					sprintf( 'Database error n° %s: %s.', $handler->errno, $handler->error. " SQL=$query" )
-				)
+			new \Exception(
+				sprintf( 'Database error n° %s: %s.', $handler->errno, $handler->error. " SQL=$query" )
 			);
 		} else {
-			\zephyros\Logger::logQuery( round(($timeEnd - $timeStart) * 1000, 0), $query );
+			$this->container->logger()->info(round(($timeEnd - $timeStart) * 1000, 0).': '.$query);
 		}
 
 		return $result;
@@ -113,13 +111,11 @@ class Mysql {
 		$timeEnd = microtime( true );
 
 		if ( $result === false ) {
-			\zephyros\Logger::logException(
 				new \Exception(
 					sprintf( 'Database error n° %s: %s.', $this->connections[$this->use_shard]['write']->errno, $this->connections[$this->use_shard]['write']->error. " SQL=$query" )
-				)
-			);
+				);
 		} else {
-			\zephyros\Logger::logQuery( round(($timeEnd - $timeStart) * 1000, 0), $query );
+			$this->container->logger()->info( round(($timeEnd - $timeStart) * 1000, 0).': '.$query );
 		}
 
 		return $result;
@@ -135,7 +131,7 @@ class Mysql {
 		$update = '';
 		foreach ( (array)$data as $key => $value ) {
 			$fields .= '`'.$key.'`,';
-			if ( $value === now || $value === current_date ) {
+			if ( $value === self::now || $value === self::current_date ) {
 				$values .= "'" . self::utc_timestamp() . "',";
 			} else if ( $value === null ) {
 				$values .= 'NULL,';
@@ -147,7 +143,7 @@ class Mysql {
 				$update .= '`'.$key.'` = `'.$key.'` + '.((float)$value).',';
 			} else if ( $value === null ) {
 				$update .= '`'.$key.'` = NULL,';
-			} else if ( $value === now|| $value === current_date ) {
+			} else if ( $value === self::now|| $value === self::current_date ) {
 				$update .= '`'.$key."` = '" . self::utc_timestamp() . "',";
 			} else {
 				$update .= '`'.$key.'` = "'.$this->escape($value).'",';
@@ -173,7 +169,7 @@ class Mysql {
 			} else {
 				$fields = false;
 			}
-			if ( $value === now || $value === current_date ) {
+			if ( $value === self::now || $value === self::current_date ) {
 				$values .= '"'.self::utc_timestamp().'",';
 			} else {
 				$values .= '"'.$this->escape($value).'",';
@@ -195,7 +191,7 @@ class Mysql {
 		$query = 'UPDATE '.$table.' SET';
 
 		foreach ( $data as $key => $value ) {
-			if ( $value === now || $value === current_date ) {
+			if ( $value === self::now || $value === self::current_date ) {
 				$update .= '`'.$this->escape($key).'` = "'.self::utc_timestamp().'",';
 			} else {
 				$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'",';
@@ -206,9 +202,9 @@ class Mysql {
 		$query .= ' WHERE';
 		if ( is_array($fields) ) {
 			foreach ( $fields as $key => $value ) {
-				if ( $value === now ) {
+				if ( $value === self::now ) {
 					$query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
-				} else if ( $value === current_date ) {
+				} else if ( $value === self::current_date ) {
 					$query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
 				} else {
 					$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
@@ -234,9 +230,9 @@ class Mysql {
 		$query = 'DELETE FROM '.$table.' WHERE';
 		if ( is_array($fields) ) {
 			foreach ( $fields as $key => $value ) {
-				if ( $value === now ) {
+				if ( $value === self::now ) {
 					$query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
-				} else if ( $value === current_date ) {
+				} else if ( $value === self::current_date ) {
 					$query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
 				} else {
 					$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
@@ -257,9 +253,9 @@ class Mysql {
 		$query = 'SELECT * FROM '.$table.' WHERE';
 		if ( is_array($restrictions) ) {
 			foreach ( $restrictions as $key => $value ) {
-				if ( $value === now ) {
+				if ( $value === self::now ) {
 					$query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
-				} else if ( $value === current_date ) {
+				} else if ( $value === self::current_date ) {
 					$query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
 				} else {
 					$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
@@ -291,9 +287,9 @@ class Mysql {
 			$query .= ' 1';
 		} else if ( is_array($fields) ) {
 			foreach ( $fields as $key => $value ) {
-				if ( $value === now ) {
+				if ( $value === self::now ) {
 					$query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';	
-				} else if ( $value === current_date ) {
+				} else if ( $value === self::current_date ) {
 					$query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';	
 				} else {
 					$query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';

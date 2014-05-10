@@ -71,7 +71,7 @@ abstract class ActiveRecord {
 				}
 			} else {
 				foreach ( $id as $key => $value ) {
-					if ( $value === now ) {
+					if ( $value === self::now ) {
 						$value = Mysql::utc_timestamp();
 					}
 					
@@ -91,7 +91,7 @@ abstract class ActiveRecord {
 	}
 	
 	public function __set( $key, $value ) {
-		if ( $value === now ) {
+		if ( $value === self::now ) {
 			$value = Mysql::utc_timestamp();
 		}
 		
@@ -473,23 +473,16 @@ abstract class ActiveRecord {
 	}
 
 	final public function apply_patch( $patch, $patching_schema = 'default' ) {
-		$patching_schema = $this->patching_schema( $patching_schema );
+		$patching_schema = $this->patching_schema($patching_schema);
 		if (empty($patching_schema)) {
 			throw new BadRequestException;
 		}
 
-		$attributes_not_matched = [];
-		foreach ( $this->patching_schemas[$patching_schema] as $key => $details ) {
-			if ( !isset($patch[$key]) ) {
-				$attributes_not_matched[] = $key;
-			} else {
+		foreach ( $patching_schema as $key => $details ) {
+			if ( isset($patch[$key]) ) {
 				$this->_data[$key] = $patch[$key];
 			}
 		}
-
-		if (!empty($attributes_not_matched)) {
-			throw new BadRequestException( '', $attributes_not_matched );
-		} 
 	}
 
 	final public function validate( $validation_schema = 'default' ) {
