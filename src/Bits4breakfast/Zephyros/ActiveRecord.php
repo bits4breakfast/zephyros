@@ -215,7 +215,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init($this->_container);
+		$db = Mysql::init(ServiceContainer::instance());
 
 		if ( is_string($conditions) ) {
 			$query = $conditions;	
@@ -300,7 +300,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init($this->_container);
+		$db = Mysql::init(ServiceContainer::instance());
 
 		$query = '';
 		foreach ( $conditions as $field => $value ) {
