@@ -20,10 +20,6 @@ class ServiceContainer {
 		return self::$instance;
 	}
 
-	public static function instance() {
-		return self::$instance;
-	}
-
 	private function __construct( Config $config ) {
 		$this->register('bits4brekfast.zephyros.config', $config );
 		$this->register('bits4brekfast.zephyros.logger', new Logger( 'bits4brekfast.zephyros.logger' ) );

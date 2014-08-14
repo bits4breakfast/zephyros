@@ -37,7 +37,7 @@ abstract class ActiveRecord {
 	protected $_encrypt = [];
 
 	public function __construct( $id = NULL, $load = true, $strict = false ) {
-		$this->_container = ServiceContainer::instance();
+		$this->_container = ServiceContainer::init();
 
 		if ( isset($this->shard) && trim($this->shard) != '' ) {
 			$this->_shard = $this->shard;
@@ -215,7 +215,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init(ServiceContainer::instance());
+		$db = Mysql::init(ServiceContainer::init());
 
 		if ( is_string($conditions) ) {
 			$query = $conditions;	
@@ -300,7 +300,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init(ServiceContainer::instance());
+		$db = Mysql::init(ServiceContainer::init());
 
 		$query = '';
 		foreach ( $conditions as $field => $value ) {
