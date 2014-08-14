@@ -1,17 +1,19 @@
 <?php
-namespace Bits4breakfast\Zephyros;
+namespace Bits4breakfast\Zephyros\Service;
 
-class LanguageManager {
+use Bits4breakfast\Zephyros\ServiceContainer;
+use Bits4breakfast\Zephyros\ServiceInterface;
 
-	private static $instances = [];
+class LanguageManager implements ServiceInterface {
 
+	protected $container = null;
 	protected $db = null;
 	
 	protected $lang = 'EN';
 	protected $cache = [];
 	
-	
 	public function __construct(ServiceContainer $container) {
+		$this->container = $container;
 		$this->db = $container->db();
 	}
 	
@@ -31,24 +33,24 @@ class LanguageManager {
 		if ( isset($this->cache[$code]) ) {
 			$text = $this->cache[$code];
 		} else {
-			$text = apc_fetch( 'lm:'.$this->lang.':'.$code );
+			$text = $this->container->cache()->get( 'lm:'.$this->lang.':'.$code );
 			if ( false === $text ) {
 				$text = $this->db->pick('setup')->result("SELECT IF(COUNT(*),text,'') FROM constants_translations LEFT JOIN constants ON constant_id=constants.id WHERE code='".$code."' AND lang='".$this->lang."'");
 				
 				if ( trim($text) != '' ) {
-					apc_store( 'lm:'.$this->lang.':'.$code, $text );
+					$this->container->cache()->set( 'lm:'.$this->lang.':'.$code, $text );
 				} else {
-					$text = apc_fetch( 'lm:EN:'.$code );
+					$text = $this->container->cache()->get( 'lm:EN:'.$code );
 					if ( false === $text ) {
 						$text = $this->db->pick('setup')->result("SELECT IF(COUNT(*),text,'') FROM constants_translations LEFT JOIN constants ON constant_id=constants.id WHERE code='".$code."' AND lang='EN'");
 						
 						if ( trim($text) != '' ) {
-							apc_store( 'lm:'.$this->lang.':'.$code, $text );
+							$this->container->cache()->set( 'lm:'.$this->lang.':'.$code, $text );
 						} else {
 							$text = $code;
 						}
 					} else {
-						apc_store( 'lm:'.$this->lang.':'.$code, $text );
+						$this->container->cache()->set( 'lm:'.$this->lang.':'.$code, $text );
 					}
 				}
 			}

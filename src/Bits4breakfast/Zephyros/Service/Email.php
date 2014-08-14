@@ -1,35 +1,47 @@
 <?php
-namespace Bits4breakfast\Zephyros;
+namespace Bits4breakfast\Zephyros\Service;
 
-class Email extends \PHPMailer {
+use Bits4breakfast\Zephyros\ServiceContainer;
+use Bits4breakfast\Zephyros\ServiceInterface;
 
-	public function __construct($senderAddress = null, $senderName = null) {
+class Mailer extends \PHPMailer implements ServiceInterface{
+
+	protected $container = null;
+
+	public $From = null;
+	public $FromName = null;
+
+	public function __construct(ServiceContainer $container) {
+		$this->container = $container;
+
 		parent::__construct(true);
-
-		if ( $senderAddress == null ) {
-			$senderAddress = \Config::MAIL_SENDER_ADDRESS;
-		}
-
-		if ($senderName == null) {
-			$senderName = \Config::MAIL_SENDER_NAME;
-		}
-
-		$this->from([ 'email' => $senderAddress, 'name' => $senderName ]);
 
 		if ( DEV_ENVIRONMENT ) {
 			$this->IsMail();
 		} else {
 			$this->setSMTP(
-				\Config::SMTP_AUTH,
-				\Config::SMTP_HOST,
-				\Config::SMTP_USER,
-				\Config::SMTP_PASSWORD,
-				\Config::SMTP_SECURE,
-				\Config::SMTP_PORT);
+				$this->container->config()->get('mailer.smpt_auth'),
+				$this->container->config()->get('mailer.smpt_host'),
+				$this->container->config()->get('mailer.smpt_user'),
+				$this->container->config()->get('mailer.smpt_password'),
+				$this->container->config()->get('mailer.smpt_secure'),
+				$this->container->config()->get('mailer.smpt_port')
+			);
 		}
 	}
 
+	public function set_sender($address, $name) {
+		$this->from([ 'email' => $address, 'name' => $name ]);
+	}
+
 	public function send() {
+		if ($this->From == null || $this->FromName == null) {
+			$this->from([
+				'email' => $this->container->config()->get('mailer.default_sender_email'), 
+				'name' => $this->container->config()->get('mailer.default_sender_name')
+			]);
+		}
+
 		return parent::Send();
 	}
 

@@ -1,7 +1,10 @@
 <?php
-namespace Bits4breakfast\Zephyros;
+namespace Bits4breakfast\Zephyros\Service;
 
-class Mysql {
+use Bits4breakfast\Zephyros\ServiceContainer;
+use Bits4breakfast\Zephyros\ServiceInterface;
+
+class Mysql implements ServiceInterface {
 
 	const first = 0;
 	const all = 1;
@@ -12,35 +15,21 @@ class Mysql {
 	const now = 'zephyros_ActiveRecord_now';
 	const current_date = 'zephyros_ActiveRecord_current_date';
 
-	private static $instances = array();
 	private static $now = null;
 
 	private $connections = array();
-	private $container = null;
+	protected $container = null;
 
 	private $use_shard = '';
 
 	private $cache = array();
 
-	public function __construct( ServiceContainer $container ) {
+	public function __construct(ServiceContainer $container) {
 		$shards = array_keys((array)$container->config()->get('database_shards'));
 		$this->use_shard = $shards[0];
 		$this->container = $container;
 
 		$this->connect('read');
-	}
-
-	public static function init( ServiceContainer $container ) {
-		$hash = md5( getmypid() . $container->config()->get('database_username') . $container->config()->get('database_password') . $container->config()->get('database_database') );
-
-		if ( !isset(self::$instances[$hash]) )
-			self::$instances[$hash] = new Mysql($container);
-
-		return self::$instances[$hash];
-	}
-
-	public static function release() {
-		self::$instances = array();
 	}
 
 	public function pick( $shard ) {

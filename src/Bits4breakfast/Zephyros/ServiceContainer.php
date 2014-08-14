@@ -23,10 +23,10 @@ class ServiceContainer {
 	private function __construct( Config $config ) {
 		$this->register('bits4brekfast.zephyros.config', $config );
 		$this->register('bits4brekfast.zephyros.logger', new Logger( 'bits4brekfast.zephyros.logger' ) );
-		$this->register('bits4brekfast.zephyros.db', Mysql::init( $this ) );
+		$this->register('bits4brekfast.zephyros.db', new Mysql( $this ) );
 		$this->register('bits4brekfast.zephyros.cache', new Cache( $this ) );
 		$this->register('bits4brekfast.zephyros.lm', new LanguageManager( $this ) );
-		$this->register('bits4brekfast.zephyros.service_bus', new ServiceBus( $this ) );
+		$this->register('bits4brekfast.zephyros.message_bus', new MessageBus( $this ) );
 	}
 
 	public function register( $service_id, $instance ) {
@@ -93,6 +93,6 @@ class ServiceContainer {
 	}
 
 	public function bus() {
-		return $this->services['bits4brekfast.zephyros.service_bus'];
+		return $this->services['bits4brekfast.zephyros.message_bus'];
 	}
 }

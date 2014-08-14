@@ -1,9 +1,12 @@
 <?php
-namespace Bits4breakfast\Zephyros;
+namespace Bits4breakfast\Zephyros\Service;
 
 use Aws\Common\Aws;
+use Bits4breakfast\Zephyros\ServiceContainer;
+use Bits4breakfast\Zephyros\ServiceInterface;
 
-class ServiceBus {
+class MessageBus implements ServiceInterface {
+	
 	protected $container = null;
 	protected $sns = null;
 	
@@ -11,30 +14,30 @@ class ServiceBus {
 		$this->container = $container;
 	}
 
-	public function emit( $event, $payload = null ) {
+	public function emit($event, $payload = null) {
 		$config = $this->container->config();
 
 		if ( empty($event) ) {
 			throw new \Exception("Type cannot be empty");
 		}
 			
-		$routing_table = $config->get('service_bus.routing_table');
+		$routing_table = $config->get('message_bus.routing_table');
 		if ( !isset($routing_table[$event]) ) {
 			throw new \Exception(
 				"No topics found for key ".$event.", envelope is in details ".json_encode($payload)
 			);
 		}
 
-		$message = array( 
+		$message = [ 
 			'type' => $event,
 			'payload' => $payload
-		);
+		];
 
 		foreach ( $routing_table[$event] as $topic ) {
 			if ( false && DEV_ENVIRONMENT ) {
 				$id = uniqid();
 	
-				$fakeSnsMessage = array(
+				$fakeSnsMessage = [
 					"Type" => "Notification",
 					"MessageId" => $id,
 					"TopicArn" => $topic,
@@ -45,7 +48,7 @@ class ServiceBus {
 					"SigningCertURL" => "https://sns.eu-west-1.amazonaws.com/SimpleNotificationService-f3ecfb7224c7233fe7bb5f59f96de52f.pem",
 					"UnsubscribeURL" => "https://sns.eu-west-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-west-1:252473489437:com_youmpa_prod_notifications_actions:2c6f72fd-6718-4826-8deb-4cc93e1d6e0b",
 					"SubscriptionArn" => "arn:aws:sns:eu-west-1:252473489437:com_youmpa_prod_notifications_actions:2c6f72fd-6718-4826-8deb-4cc93e1d6e0b"
-				);
+				];
 	
 				$folder = sprintf("%s/sns_simulator", \Config::TEMP_PATH);
 				if (!is_dir($folder))
