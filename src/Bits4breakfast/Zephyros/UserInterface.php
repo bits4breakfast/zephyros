@@ -46,7 +46,7 @@ abstract class UserInterface {
 		$this->set_language_manager( $container->lm() );
 	}
 	
-	final private function set_language_manager( LanguageManager $l ) {
+	final private function set_language_manager( Service\LanguageManager $l ) {
 		$this->l = $l;
 		$this->smarty->assign( 'l', $l );
 		$this->data['lang'] = $l->lang;
