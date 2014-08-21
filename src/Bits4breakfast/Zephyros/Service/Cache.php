@@ -1,5 +1,5 @@
 <?php
-namespace Bits4breakfast\Zephyros;
+namespace Bits4breakfast\Zephyros\Service;
 
 use Bits4breakfast\Zephyros\ServiceContainer;
 use Bits4breakfast\Zephyros\ServiceInterface;
