@@ -11,7 +11,7 @@ final class AppLoader {
 
 	private $controller = null;
 
-	public function __construct($subdomain = 'Frontend') {
+	public function __construct($subdomain = 'website') {
 		ob_start();
 		session_start();
 

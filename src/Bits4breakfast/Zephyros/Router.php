@@ -76,7 +76,7 @@ class Router {
 			$this->config->get('kernel_namespace'),
 			'Controller',
 			ucfirst(strtolower($this->p->subdomain)),
-			Inflector::camelize( $this->p->controller )
+			Inflector::camelize($this->p->controller)
 		];
 	}
 }
