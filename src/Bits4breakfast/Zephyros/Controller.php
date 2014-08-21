@@ -174,7 +174,7 @@ class Controller {
 				echo '<h1>Error: #'.$this->response['code'].'</h1>';
 			}
 		}
-		Cache::commit();
+		$this->container->cache()->commit();
 	}
 
 	public function response($code = 'ACK', $payload = null) {
