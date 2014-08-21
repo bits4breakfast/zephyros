@@ -33,12 +33,13 @@ final class AppLoader {
 		}
 
 		$config = new Config($this->app_base_path, $this->route->subdomain, $this->environemnt);
-		$container = ServiceContainer::init($config);
+		$services = new Services($this->app_base_path);
+		$container = ServiceContainer::init($config, $services);
 
 		$router = new Router($this->route, $config);
 		$controller = $router->route();
 
-		if ( file_exists($config->app_base_path.'/src/'.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
+		if (file_exists($config->app_base_path.'/src/'.implode(DIRECTORY_SEPARATOR, $controller)).'.php') {
 			$controller = implode('\\', $controller);
 			$controller = new $controller($this->route, $container);
 			$controller->render();
