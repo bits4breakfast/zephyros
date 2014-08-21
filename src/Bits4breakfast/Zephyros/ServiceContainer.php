@@ -28,10 +28,10 @@ class ServiceContainer {
 		$this->register('bits4brekfast.zephyros.config', $config );
 		$this->register('bits4brekfast.zephyros.service_container_definitions', $service_container_definitions );
 		$this->register('bits4brekfast.zephyros.logger', new Logger( 'bits4brekfast.zephyros.logger' ) );
-		$this->register('bits4brekfast.zephyros.db', new Mysql( $this ) );
-		$this->register('bits4brekfast.zephyros.cache', new Cache( $this ) );
-		$this->register('bits4brekfast.zephyros.lm', new LanguageManager( $this ) );
-		$this->register('bits4brekfast.zephyros.message_bus', new MessageBus( $this ) );
+		$this->register('bits4brekfast.zephyros.db', new Service\Mysql( $this ) );
+		$this->register('bits4brekfast.zephyros.cache', new Service\Cache( $this ) );
+		$this->register('bits4brekfast.zephyros.lm', new Service\LanguageManager( $this ) );
+		$this->register('bits4brekfast.zephyros.message_bus', new Service\MessageBus( $this ) );
 	}
 
 	public function register($service_id, $instance) {
