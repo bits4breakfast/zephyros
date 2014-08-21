@@ -33,6 +33,7 @@ class Cache implements ServiceInterface {
 	public function commit() {
 		if ( !empty($this->deleted_keys) ) {
 			$this->container->bus()->emit( 'invalidate_cache', (array) array_keys($this->deleted_keys) );
+			$this->deleted_keys = [];
 		}
 	}
 	
