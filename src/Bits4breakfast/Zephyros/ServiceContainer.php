@@ -8,7 +8,7 @@ class ServiceContainer {
 	private static $instance = null;
 	private $services = [];
 
-	public static function init(Config $config = null, ServiceContainerDefinitions $service_container_definitions) {
+	public static function init(Config $config = null, ServiceContainerDefinitions $service_container_definitions = null) {
 		if ( $config == null && self::$instance == null ) {
 			throw new \InvalidArgumentException( 'config instance cannot be a null reference' );
 		}
