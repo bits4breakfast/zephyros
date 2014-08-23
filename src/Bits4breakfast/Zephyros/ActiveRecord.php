@@ -478,9 +478,23 @@ abstract class ActiveRecord {
 			throw new BadRequestException;
 		}
 
+		$sanitize_schema = $this->sanitize_schema();
+
 		foreach ( $patching_schema as $key ) {
-			if ( isset($patch[$key]) ) {
-				$this->_data[$key] = $patch[$key];
+			$value = $patch[$key];
+			if (isset($sanitize_schema[$key])) {
+				foreach ($sanitize_schema[$key] as $filter) {
+					$value = filter_var($var, $filter);
+					if ($value === false) {
+						throw new BadRequestException;
+					}
+				}
+			}
+
+			if (isset($patch[$key]) && is_scalar($patch[$key])) {
+				$this->_data[$key] = $value;
+			} else if (isset($patch[$key]) && !is_scalar($patch[$key])) {
+				$this->_related[$key] = $value;
 			}
 		}
 	}
@@ -492,6 +506,44 @@ abstract class ActiveRecord {
 		}
 
 		$errors = [];
+		foreach($validation_schema as $key => $filters) {
+			$value = null;
+			if (isset($this->_data[$key])) {
+				$value = $this->data[$key];
+			} else if (isset($this->_related[$key])) {
+				$value = $this->_related[$key];
+			}
+
+			$allow_empty = true;
+			foreach ($filters as $filter) {
+				if ($filter::NAME == 'NOTEMPTY') {
+					$allow_empty = true;
+					break;
+				}
+			}
+
+			if ($allow_empty && empty($value)) {
+				break;
+			}
+
+			foreach ($filters as $filter) {
+				if ($filter::NAME == 'NOTEMPTY') {
+					$test = !empty($value);
+				} else if ($filter::NAME == 'CALLBACK') {
+					$test = filter_var($value, FILTER_CALLBACK, ['options' => $filter->callback]);
+				} else {
+					$test = filter_var($value, constant($filter::CODE));
+				}
+
+				if ($test === false) {
+					if (!isset($errors[$key])) {
+						$errors[$key] = [];
+					}
+
+					$errors[$key][] = $filter->error_string;
+				}
+			}
+		}
 
 		return $errors;
 	}
