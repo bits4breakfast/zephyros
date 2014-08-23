@@ -210,7 +210,7 @@ abstract class ActiveRecord {
 		}
 	}
 	
-	final public static function find( $what = first, $conditions = null, $options = null ) {
+	final public static function find( $what = self::first, $conditions = null, $options = null ) {
 		$calledClass = get_called_class();
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
@@ -688,11 +688,11 @@ abstract class ActiveRecord {
 	}
 	
 	private function _isCached() {
-		return Cache::exists( 'ar:'.$this->_class.':'.$this->_data['id'] );
+		return $this->_container->cache()->exists( 'ar:'.$this->_class.':'.$this->_data['id'] );
 	}
 	
 	final public function read_from_cache() {
-		$obj = Cache::get( 'ar:'.$this->_class.':'.$this->_data['id'] );
+		$obj = $this->_container->cache()->get( 'ar:'.$this->_class.':'.$this->_data['id'] );
 		
 		if( $obj === false ) {
 			return;
@@ -706,11 +706,11 @@ abstract class ActiveRecord {
 	}
 	
 	final public function write_to_cache() {
-		Cache::set( 'ar:'.$this->_class.':'.$this->_data['id'], $this, 7200 );
+		$this->_container->cache()->set( 'ar:'.$this->_class.':'.$this->_data['id'], $this, 7200 );
 	}
 	
 	final public function clear_cache() {
-		Cache::delete( 'ar:'.$this->_class.':'.$this->_data['id'] );
+		$this->_container->cache()->delete( 'ar:'.$this->_class.':'.$this->_data['id'] );
 	}
 	
 	final public function _snapshot() {

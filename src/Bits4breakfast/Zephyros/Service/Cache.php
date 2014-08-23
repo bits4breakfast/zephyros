@@ -36,6 +36,10 @@ class Cache implements ServiceInterface {
 			$this->deleted_keys = [];
 		}
 	}
+
+	public function exists($key) {
+		return (apc_exists($key) || $this->memcache->append($key, null));
+	}
 	
 	public function set( $key, $value, $ttl = self::TTL_HOUR ) {
 		$key = $this->app_id.':'.$key;
