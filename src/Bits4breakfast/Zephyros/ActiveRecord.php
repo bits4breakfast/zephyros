@@ -55,7 +55,7 @@ abstract class ActiveRecord {
 			$this->_table = $this->_name;
 		}
 
-		$this->_db = Mysql::init($this->_container);
+		$this->_db = $this->_container->db();
 		$this->_table = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$this->_table;
 		
 		if ( $id !== NULL ) {
@@ -92,7 +92,7 @@ abstract class ActiveRecord {
 	
 	public function __set( $key, $value ) {
 		if ( $value === self::now ) {
-			$value = Mysql::utc_timestamp();
+			$value = Service\Mysql::utc_timestamp();
 		}
 		
 		if ( is_array($value) || is_object($value) ) {
@@ -215,7 +215,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init(ServiceContainer::init());
+		$db = ServiceContainer::init()->db();
 
 		if ( is_string($conditions) ) {
 			$query = $conditions;	
@@ -256,11 +256,11 @@ abstract class ActiveRecord {
 		}
 		
 		$query = 'SELECT id FROM '.( trim($temp->_database) != '' ? '`'.$temp->_database.'`.' : '' ).'`'.$temp->_table.'`'.( empty($conditions) ? '' : ' WHERE '.$query );
-		if ( $what == first ) {
+		if ( $what == self::first ) {
 			$query .= ' LIMIT 1';
-		} else if ( $what == last ) {
+		} else if ( $what == self::last ) {
 			$query .= ' ORDER BY `id` DESC LIMIT 1';
-		} else if ( $what == random ) {
+		} else if ( $what == self::random ) {
 			$query .= ' ORDER BY RAND() LIMIT 1';
 		} else {
 			if ( isset($options['orderby']) ) {
@@ -281,7 +281,7 @@ abstract class ActiveRecord {
 				return null;
 			}
 			
-			if ( $what == first || $what == last || $what == random ) {
+			if ( $what == self::first || $what == self::last || $what == self::random ) {
 				$temp = new $calledClass( $result->fetch_object()->id );
 				$result->free();
 				return $temp;
@@ -300,7 +300,7 @@ abstract class ActiveRecord {
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
-		$db = Mysql::init(ServiceContainer::init());
+		$db = ServiceContainer::init()->db();
 
 		$query = '';
 		foreach ( $conditions as $field => $value ) {
