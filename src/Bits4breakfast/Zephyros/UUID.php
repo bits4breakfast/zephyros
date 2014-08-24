@@ -4,7 +4,7 @@ namespace Bits4breakfast\Zephyros;
 /*
 	As defined here http://www.php.net/manual/en/function.uniqid.php#94959
 */
-class GGUID {
+class UUID {
 
 	public static function v3($namespace, $name) {
 		if(!self::is_valid($namespace)) return false;
