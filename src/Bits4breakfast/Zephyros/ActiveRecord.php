@@ -472,15 +472,29 @@ abstract class ActiveRecord {
 		}
 	}
 
-	final public function apply_patch( $patch, $patching_schema = 'default' ) {
-		$patching_schema = $this->patching_schema($patching_schema);
+	final public function apply_patch($patch, $patching_schema = 'default', $prefix = '') {
+		$patching_schema = null;
+		if (method_exists($this, 'patching_schema')) {
+			$patching_schema = $this->patching_schema($patching_schema);
+		}
+
 		if (empty($patching_schema)) {
 			throw new BadRequestException;
 		}
 
-		$sanitize_schema = $this->sanitize_schema();
+		$sanitize_schema = null;
+		if (method_exists($this, 'sanitize_schema')) {
+			$sanitize_schema = $this->sanitize_schema();
+		}
+		foreach ($patching_schema as $key) {
+			if ($prefix != '') {
+				$key = $prefix . $key;
+			}
 
-		foreach ( $patching_schema as $key ) {
+			if (!isset($patch[$key])) {
+				throw new BadRequestException();
+			}
+
 			$value = $patch[$key];
 			if (isset($sanitize_schema[$key])) {
 				foreach ($sanitize_schema[$key] as $filter) {
@@ -500,7 +514,11 @@ abstract class ActiveRecord {
 	}
 
 	final public function validate( $validation_schema = 'default' ) {
-		$validation_schema = $this->validation_schema( $validation_schema );
+		$validation_schema = null;
+		if (method_exists($this, 'validation_schema')) {
+			$validation_schema = $this->validation_schema( $validation_schema );	
+		}
+		
 		if ( empty($validation_schema) ) {
 			return null;
 		}
