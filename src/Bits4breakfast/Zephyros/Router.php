@@ -1,7 +1,7 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-use Bits4breakst\Zephyros\Exception\Http\BadRequestException;
+use Bits4breakfast\Zephyros\Exception\Http\BadRequestException;
 
 class Router {
 	private $p = null;

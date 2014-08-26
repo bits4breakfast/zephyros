@@ -1,7 +1,7 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-use Bits4breakst\Zephyros\Exception\Http\BadRequestException;
+use Bits4breakfast\Zephyros\Exception\Http\BadRequestException;
 
 abstract class ActiveRecord {
 
@@ -472,7 +472,7 @@ abstract class ActiveRecord {
 		}
 	}
 
-	final public function apply_patch($patch, $patching_schema = 'default', $prefix = '') {
+	final public function apply_patch($patch, $patching_schema = 'default') {
 		$patching_schema = null;
 		if (method_exists($this, 'patching_schema')) {
 			$patching_schema = $this->patching_schema($patching_schema);
@@ -487,15 +487,11 @@ abstract class ActiveRecord {
 			$sanitize_schema = $this->sanitize_schema();
 		}
 		foreach ($patching_schema as $key) {
-			if ($prefix != '') {
-				$key = $prefix . $key;
-			}
-
 			if (!isset($patch[$key])) {
 				throw new BadRequestException();
 			}
-
 			$value = $patch[$key];
+			
 			if (isset($sanitize_schema[$key])) {
 				foreach ($sanitize_schema[$key] as $filter) {
 					$value = filter_var($var, $filter);
@@ -505,9 +501,9 @@ abstract class ActiveRecord {
 				}
 			}
 
-			if (isset($patch[$key]) && is_scalar($patch[$key])) {
+			if ($value === null || is_scalar($value)) {
 				$this->_data[$key] = $value;
-			} else if (isset($patch[$key]) && !is_scalar($patch[$key])) {
+			} else if (is_array($value) || is_object($value)) {
 				$this->_related[$key] = $value;
 			}
 		}

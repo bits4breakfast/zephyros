@@ -1,11 +1,11 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-use Bits4breakst\Zephyros\Exception\Http\HttpException;
-use Bits4breakst\Zephyros\Exception\Http\NotFoundException;
-use Bits4breakst\Zephyros\Exception\Http\UnauthorizedException;
-use Bits4breakst\Zephyros\Exception\Http\NotImplementedException;
-use Bits4breakst\Zephyros\Exception\Http\InternalServerErrorException;
+use Bits4breakfast\Zephyros\Exception\Http\HttpException;
+use Bits4breakfast\Zephyros\Exception\Http\NotFoundException;
+use Bits4breakfast\Zephyros\Exception\Http\UnauthorizedException;
+use Bits4breakfast\Zephyros\Exception\Http\NotImplementedException;
+use Bits4breakfast\Zephyros\Exception\Http\InternalServerErrorException;
 
 class Controller {
 	public $config = null;

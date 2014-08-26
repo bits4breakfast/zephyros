@@ -1,5 +1,5 @@
 <?php
-namespace Bits4breakst\Zephyros\Exception\Http;
+namespace Bits4breakfast\Zephyros\Exception\Http;
 
 class NotFoundException extends HttpException {
 	public function __construct( $message = "", $payload = [] ) {

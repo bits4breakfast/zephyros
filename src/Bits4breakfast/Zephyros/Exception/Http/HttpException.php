@@ -1,5 +1,5 @@
 <?php
-namespace Bits4breakst\Zephyros\Exception\Http;
+namespace Bits4breakfast\Zephyros\Exception\Http;
 
 class HttpException extends \RuntimeException {
 

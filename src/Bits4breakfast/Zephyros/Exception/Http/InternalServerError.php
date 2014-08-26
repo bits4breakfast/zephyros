@@ -1,5 +1,5 @@
 <?php
-namespace Bits4breakst\Zephyros\Exception\Http;
+namespace Bits4breakfast\Zephyros\Exception\Http;
 
 /*
 	A generic error message, given when an unexpected condition was encountered and no more 

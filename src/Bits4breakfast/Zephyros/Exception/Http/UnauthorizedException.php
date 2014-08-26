@@ -1,5 +1,5 @@
 <?php
-namespace Bits4breakst\Zephyros\Exception\Http;
+namespace Bits4breakfast\Zephyros\Exception\Http;
 
 /*
 	Similar to 403 Forbidden, but specifically for use when authentication is required and has 

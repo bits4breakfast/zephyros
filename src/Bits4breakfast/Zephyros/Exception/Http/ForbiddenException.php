@@ -1,5 +1,5 @@
 <?php
-namespace Bits4breakst\Zephyros\Exception\Http;
+namespace Bits4breakfast\Zephyros\Exception\Http;
 
 /*
 	The request was a valid request, but the server is refusing to respond to it.[2] Unlike a 401 
