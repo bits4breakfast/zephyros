@@ -545,10 +545,13 @@ abstract class ActiveRecord {
 			}
 
 			foreach ($filters as $filter) {
+				$test = true;
 				if ($filter::NAME == 'NOTEMPTY') {
 					$test = !empty($value);
 				} else if ($filter::NAME == 'UNIQUE') {
-					$test = (self::find(self::first, [$key => $value]) === null);
+					if (trim($value) !== '') {
+						$test = (self::find(self::first, [$key => $value]) === null);
+					}
 				} else if ($filter::NAME == 'CALLBACK') {
 					$test = filter_var($value, FILTER_CALLBACK, ['options' => $filter->callback]);
 				} else {
@@ -561,6 +564,10 @@ abstract class ActiveRecord {
 					}
 
 					$errors[$key][] = $filter->error_string;
+				}
+
+				if($filter::NAME == 'NOTEMPTY' && !$test) {
+					break;
 				}
 			}
 		}
