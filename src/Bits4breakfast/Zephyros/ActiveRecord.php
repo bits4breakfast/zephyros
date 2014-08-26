@@ -28,6 +28,7 @@ abstract class ActiveRecord {
 	protected $_fkName = '';
 	protected $_columns = [];
 	protected $_didLoad = true;
+	protected $_changed = [];
 
 	// Data storage
 	protected $_data = [];
@@ -99,6 +100,7 @@ abstract class ActiveRecord {
 			$this->_related[$key] = $value;
 			$this->_related['_changed'][$key] = true;
 		} else {
+			$this->_changed[$key] = true;
 			if ($value === null && isset($this->_related[$key])) {
 				$this->_related[$key] = $value;
 			} else {
@@ -491,17 +493,9 @@ abstract class ActiveRecord {
 				throw new BadRequestException();
 			}
 			$value = $patch[$key];
-			
-			if (isset($sanitize_schema[$key])) {
-				foreach ($sanitize_schema[$key] as $filter) {
-					$value = filter_var($var, $filter);
-					if ($value === false) {
-						throw new BadRequestException;
-					}
-				}
-			}
 
 			if ($value === null || is_scalar($value)) {
+				$this->_changed[$key] = true;
 				$this->_data[$key] = $value;
 			} else if (is_array($value) || is_object($value)) {
 				$this->_related[$key] = $value;
