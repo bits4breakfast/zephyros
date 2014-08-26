@@ -225,9 +225,9 @@ abstract class ActiveRecord {
 				if ( is_numeric($field) && is_array($value) ) {
 					$query .= '(';
 					foreach ( $value as $field => $value ) {
-						if ( $value == notnull ) {
+						if ( $value == self::notnull ) {
 							$query .= '`'.$field.'` IS NOT NULL OR ';
-						} else if ( $value == isnull ) {
+						} else if ( $value == self::isnull ) {
 							$query .= '`'.$field.'` IS NULL OR ';
 						} else if ( $value != null ) {
 							if ( is_array($value) ) {
@@ -239,9 +239,9 @@ abstract class ActiveRecord {
 					}
 					$query = substr($query,0,-4). ') AND ';
 				} else {
-					if ( $value == notnull ) {
+					if ( $value == self::notnull ) {
 						$query .= '`'.$field.'` IS NOT NULL AND ';
-					} else if ( $value == isnull ) {
+					} else if ( $value == self::isnull ) {
 						$query .= '`'.$field.'` IS NULL AND ';
 					} else if ( $value != null ) {
 						if ( is_array($value) ) {
@@ -304,9 +304,9 @@ abstract class ActiveRecord {
 
 		$query = '';
 		foreach ( $conditions as $field => $value ) {
-			if ( $value == notnull ) {
+			if ( $value == self::notnull ) {
 				$query .= '`'.$field.'` IS NOT NULL AND ';
-			} else if ( $value == isnull ) {
+			} else if ( $value == self::isnull ) {
 				$query .= '`'.$field.'` IS NULL AND ';
 			} else {
 				$query .= '`'.$field.'` = "'.$db->escape($value).'" AND ';
@@ -528,6 +528,10 @@ abstract class ActiveRecord {
 				$value = $this->_related[$key];
 			}
 
+			if (is_object($filters)) {
+				$filters = [$filters];
+			}
+
 			$allow_empty = true;
 			foreach ($filters as $filter) {
 				if ($filter::NAME == 'NOTEMPTY') {
@@ -544,7 +548,7 @@ abstract class ActiveRecord {
 				if ($filter::NAME == 'NOTEMPTY') {
 					$test = !empty($value);
 				} else if ($filter::NAME == 'UNIQUE') {
-					$test = (self::find(first, [$filter->key => $value]) === null);
+					$test = (self::find(self::first, [$key => $value]) === null);
 				} else if ($filter::NAME == 'CALLBACK') {
 					$test = filter_var($value, FILTER_CALLBACK, ['options' => $filter->callback]);
 				} else {
