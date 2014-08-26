@@ -531,7 +531,7 @@ abstract class ActiveRecord {
 			$allow_empty = true;
 			foreach ($filters as $filter) {
 				if ($filter::NAME == 'NOTEMPTY') {
-					$allow_empty = true;
+					$allow_empty = false;
 					break;
 				}
 			}
@@ -543,6 +543,8 @@ abstract class ActiveRecord {
 			foreach ($filters as $filter) {
 				if ($filter::NAME == 'NOTEMPTY') {
 					$test = !empty($value);
+				} else if ($filter::NAME == 'UNIQUE') {
+					$test = (self::find(first, [$filter->key => $value]) === null);
 				} else if ($filter::NAME == 'CALLBACK') {
 					$test = filter_var($value, FILTER_CALLBACK, ['options' => $filter->callback]);
 				} else {
