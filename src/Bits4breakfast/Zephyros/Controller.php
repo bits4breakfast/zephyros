@@ -80,7 +80,7 @@ class Controller {
 
 	final protected function _render_error( $error_code, $message = '', $payload = [] ) {
 		$this->db->general_rollback();
-		\HttpResponse::status( $error_code );
+		http_response_code($error_code);
 		if ( $this->route->format == 'html' ) {
 			if ($this->container->config()->get('errors.rescue_page')) {
 				$fully_qualified_name = '\\'.$this->container->config()->get('kernel.namespace').'\\UI\\'.ucfirst(strtolower($this->route->subdomain)).'\\ErrorPage';
