@@ -34,7 +34,7 @@ class MessageBus implements ServiceInterface {
 		];
 
 		foreach ( $routing_table[$event] as $topic ) {
-			if ( false && DEV_ENVIRONMENT ) {
+			if (DEV_ENVIRONMENT) {
 				$id = uniqid();
 	
 				$fakeSnsMessage = [
@@ -57,7 +57,7 @@ class MessageBus implements ServiceInterface {
 				$file = sprintf("%s/%s.msg", $folder, $id);
 				file_put_contents($file, json_encode($fakeSnsMessage));
 			} else {
-				if ( $this->sns === null ) {
+				if ($this->sns === null) {
 					$this->sns = Aws::factory( \Config::BASE_PATH.'/application/config/aws.config.php' )->get('sns');
 				}
 
