@@ -7,6 +7,8 @@ use Bits4breakfast\Zephyros\Exception\Http\UnauthorizedException;
 use Bits4breakfast\Zephyros\Exception\Http\NotImplementedException;
 use Bits4breakfast\Zephyros\Exception\Http\InternalServerErrorException;
 
+use Symfony\Component\HttpFoundation\Request;
+
 class Controller {
 	public $config = null;
 	public $container = null;
@@ -15,6 +17,7 @@ class Controller {
 	protected $db = null;
 	protected $l = null;
 	protected $user = null;
+	protected $request = null;
 	protected $response = null;
 
 	public function __construct(Route $route, ServiceContainer $container) {
@@ -41,6 +44,14 @@ class Controller {
 		}
 
 		$this->l->set_language( $lang );
+	}
+
+	final public function request() {
+		if ($this->request === null) {
+			$this->request = Request::createFromGlobals();
+		}
+
+		return $this->request;
 	}
 
 	public function render() {

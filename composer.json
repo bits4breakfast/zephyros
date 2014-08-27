@@ -10,7 +10,8 @@
 		"smarty/smarty": "v3.1.16",
 		"phpmailer/phpmailer": "dev-master",
 		"aws/aws-sdk-php": "dev-master",
-		"monolog/monolog": "1.7.0"
+		"monolog/monolog": "1.7.0",
+		"symfony/http-foundation": "dev-master"
 	},
 	"minimum-stability": "dev"
 }
