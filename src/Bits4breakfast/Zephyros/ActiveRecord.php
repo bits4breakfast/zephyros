@@ -517,7 +517,7 @@ abstract class ActiveRecord {
 		foreach($validation_schema as $key => $filters) {
 			$value = null;
 			if (isset($this->_data[$key])) {
-				$value = $this->data[$key];
+				$value = $this->_data[$key];
 			} else if (isset($this->_related[$key])) {
 				$value = $this->_related[$key];
 			}
