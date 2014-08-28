@@ -20,7 +20,7 @@ class Controller {
 	protected $request = null;
 	protected $response = null;
 
-	public function __construct(Route $route, ServiceContainer $container) {
+	final public function __construct(Route $route, ServiceContainer $container) {
 		$this->route = $route;
 
 		$this->container = $container;
@@ -44,6 +44,10 @@ class Controller {
 		}
 
 		$this->l->set_language( $lang );
+
+		if (method_exists($this, 'init')) {
+			$this->init();
+		}
 	}
 
 	final public function request() {
@@ -165,6 +169,10 @@ class Controller {
 	}
 
 	public final function shutdown() {
+		if (method_exists($this, 'before_shutdown')) {
+			$this->before_shutdown();
+		}
+
 		if ($this->route->format == 'json') {
 			if ( $this->response == null ) {
 				$this->response();
