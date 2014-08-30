@@ -186,7 +186,7 @@ class Controller {
 				$this->response->set_route($this->route);
 				$this->response->set_user($this->user);
 				
-				if (isset($_SESSION['flash_message']) && trim($_SESSION['flash_message']) != '' && !$this->will_cache()) {
+				if (isset($_SESSION['flash_message']) && trim($_SESSION['flash_message']) != '' && !$this->response->will_cache()) {
 					$this->response->set_flash_message($_SESSION['flash_message']);
 				}
 				
