@@ -174,7 +174,7 @@ class Controller {
 		}
 
 		if ($this->route->format == 'json') {
-			if ( $this->response == null ) {
+			if ($this->response == null) {
 				$this->response();
 			}
 			echo json_encode($this->response);
@@ -182,10 +182,15 @@ class Controller {
 			if (is_string($this->response)) {
 				echo $this->response;
 			} else if ($this->response instanceof UserInterface) {
-				$this->response->set_container( $this->container );
-				$this->response->set_route( $this->route );
-				$this->response->set_user( $this->user );
-				if ( method_exists($this->response, 'init') ) {
+				$this->response->set_container($this->container);
+				$this->response->set_route($this->route);
+				$this->response->set_user($this->user);
+				
+				if (isset($_SESSION['flash_message']) && trim($_SESSION['flash_message']) != '' && !$this->will_cache()) {
+					$this->response->set_flash_message($_SESSION['flash_message']);
+				}
+				
+				if (method_exists($this->response, 'init')) {
 					$this->response->init();
 				}
 				echo $this->response->output();

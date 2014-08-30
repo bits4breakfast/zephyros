@@ -12,7 +12,9 @@ abstract class UserInterface {
 	protected $user = null;
 	protected $data = [];
 
-	protected $metaTags = [];
+	protected $flash_message = null;
+
+	protected $meta_tags = [];
 	protected $opengraph = [];
 	protected $stylesheets = [];
 	protected $scripts = [];
@@ -63,12 +65,16 @@ abstract class UserInterface {
 		$this->smarty->assign( 'user', $this->data['user'] );
 	}
 
+	final public function set_flash_message($message) {
+		$this->flash_message = $message;
+	}
+
 	final public function set($key, $value) {
 		$this->smarty->assign($key, $value);
 	}
 	
 	final public function metatag($name, $content) {
-		$this->metaTags[] = array( 'name' => $name, 'content' => $content );
+		$this->meta_tags[] = array( 'name' => $name, 'content' => $content );
 	}
 
 	final public function opengraph( $key, $value ) {
@@ -93,6 +99,10 @@ abstract class UserInterface {
 	final public function allow_caching() {
 		$this->allow_caching = true;
 	}
+
+	final public function will_cache() {
+		return $this->allow_caching;
+	}
 	
 	final public function is_cached() {
 		return Cache::exists( $this->cache_key() );
@@ -113,7 +123,7 @@ abstract class UserInterface {
 				
 				$this->smarty->assign( 'data', $this->data );
 				$this->smarty->assign( 'config', $this->container->config()->dump() );
-				$this->smarty->assign( 'metaTags', $this->metaTags );
+				$this->smarty->assign( 'meta_tags', $this->meta_tags );
 				$this->smarty->assign( 'opengraph', $this->opengraph );
 				$this->smarty->assign( 'stylesheets', $this->stylesheets );
 				$this->smarty->assign( 'javascripts', $this->scripts );
@@ -132,10 +142,11 @@ abstract class UserInterface {
 			
 			$this->smarty->assign( 'data', $this->data );
 			$this->smarty->assign( 'config', $this->container->config()->dump() );
-			$this->smarty->assign( 'metaTags', $this->metaTags );
+			$this->smarty->assign( 'meta_tags', $this->meta_tags );
 			$this->smarty->assign( 'opengraph', $this->opengraph );
 			$this->smarty->assign( 'stylesheets', $this->stylesheets );
 			$this->smarty->assign( 'javascripts', $this->scripts );
+			$this->smarty->assign( 'flash_message', $this->flash_message );
 			
 			foreach ( $this->templates as $template ) {
 				$this->smarty->display( $template );
