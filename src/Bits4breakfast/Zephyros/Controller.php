@@ -188,6 +188,7 @@ class Controller {
 				
 				if (isset($_SESSION['flash_message']) && trim($_SESSION['flash_message']) != '' && !$this->response->will_cache()) {
 					$this->response->set_flash_message($_SESSION['flash_message']);
+					unset($_SESSION['flash_message']);
 				}
 				
 				if (method_exists($this->response, 'init')) {
