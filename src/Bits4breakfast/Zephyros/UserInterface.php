@@ -39,7 +39,7 @@ abstract class UserInterface {
 	
 	final public function set_route( Route $route ) {
 		$this->route = $route;
-		$this->smarty->assign( 'route', $route );
+		$this->smarty->assign('route', (array)$route);
 	}
 
 	final public function set_container( ServiceContainer $container ) {
@@ -50,7 +50,7 @@ abstract class UserInterface {
 	
 	final private function set_language_manager( Service\LanguageManager $l ) {
 		$this->l = $l;
-		$this->smarty->assign( 'l', $l );
+		$this->smarty->assign('l', $l);
 		$this->data['lang'] = $l->lang;
 	}
 
@@ -121,7 +121,7 @@ abstract class UserInterface {
 			if ( $output === false ) {
 				$this->build();
 				
-				$this->smarty->assign( 'data', $this->data );
+				$this->smarty->assign( 'data', (array)$this->data );
 				$this->smarty->assign( 'config', $this->container->config()->dump() );
 				$this->smarty->assign( 'meta_tags', $this->meta_tags );
 				$this->smarty->assign( 'opengraph', $this->opengraph );
@@ -140,7 +140,7 @@ abstract class UserInterface {
 		} else {
 			$this->build();
 			
-			$this->smarty->assign( 'data', $this->data );
+			$this->smarty->assign( 'data', (array)$this->data );
 			$this->smarty->assign( 'config', $this->container->config()->dump() );
 			$this->smarty->assign( 'meta_tags', $this->meta_tags );
 			$this->smarty->assign( 'opengraph', $this->opengraph );
