@@ -474,10 +474,10 @@ abstract class ActiveRecord {
 		}
 	}
 
-	final public function apply_patch($patch, $patching_schema = 'default') {
+	final public function apply_patch($patch, $place = 'default') {
 		$patching_schema = null;
 		if (method_exists($this, 'patching_schema')) {
-			$patching_schema = $this->patching_schema($patching_schema);
+			$patching_schema = $this->patching_schema($place);
 		}
 
 		if (empty($patching_schema)) {
@@ -490,9 +490,10 @@ abstract class ActiveRecord {
 		}
 		foreach ($patching_schema as $key) {
 			if (!isset($patch[$key])) {
-				throw new BadRequestException();
+				$value = null;
+			} else {
+				$value = $patch[$key];
 			}
-			$value = $patch[$key];
 
 			if ($value === null || is_scalar($value)) {
 				$this->_changed[$key] = true;
@@ -506,10 +507,10 @@ abstract class ActiveRecord {
 	final public function validate( $validation_schema = 'default' ) {
 		$validation_schema = null;
 		if (method_exists($this, 'validation_schema')) {
-			$validation_schema = $this->validation_schema( $validation_schema );	
+			$validation_schema = $this->validation_schema($validation_schema);
 		}
 		
-		if ( empty($validation_schema) ) {
+		if (empty($validation_schema)) {
 			return null;
 		}
 
