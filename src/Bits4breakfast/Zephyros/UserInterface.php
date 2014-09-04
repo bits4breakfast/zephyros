@@ -26,10 +26,10 @@ abstract class UserInterface {
 
 		$smarty = new \Smarty;
 		$smarty->setTemplateDir( 
-			array(
+			[
 				$config->app_base_path.'/src/'.$folder.'/Template/'.$config->subdomain,
 				$config->app_base_path.'/src/'.$folder.'/Template'
-			) 
+			] 
 		)
 		->setCompileDir( $config->get('smarty_cache_path') )
 		->setCacheDir( $config->get('smarty_cache_path') )
@@ -74,22 +74,23 @@ abstract class UserInterface {
 	}
 	
 	final public function metatag($name, $content) {
-		$this->meta_tags[] = array( 'name' => $name, 'content' => $content );
+		$this->meta_tags[] = ['name' => $name, 'content' => $content];
 	}
 
 	final public function opengraph( $key, $value ) {
-		$this->opengraph[] = array( 'key' => 'og:'.$key, 'value' => $value );	
+		$this->opengraph[] = ['key' => 'og:'.$key, 'value' => $value];	
 	}
 
 	final public function css( $path ) {
 		$this->stylesheets[] = $this->container->config()->get('assets_cdn_url') . $path;
 	}
 
-	final public function js( $path, $domain = NULL ) {
-		if(!isset($domain)) {
-			$domain = $this->container->config()->get('assets_cdn_url');
+	final public function js( $path, $remote = false ) {
+		if($remote) {
+			$this->scripts[] = $path;
+		} else {
+			$this->scripts[] = $this->container->config()->get('assets_cdn_url') . $path;
 		}
-		$this->scripts[] = $domain . $path;
 	}
 
 	final public function tpl( $path ) {
