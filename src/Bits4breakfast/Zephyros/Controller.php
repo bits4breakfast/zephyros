@@ -61,7 +61,11 @@ class Controller {
 	public function render() {
 		try {
 			if ($this->user === null && isset($this->requires_authentication) && $this->requires_authentication) {
-				throw new UnauthorizedException;
+				if ($this->route->format == 'html') {
+					return $this->redirect_to('login');
+				} else {
+					throw new UnauthorizedException;
+				}
 			}
 
 			$class_methods = get_class_methods($this);
@@ -78,6 +82,7 @@ class Controller {
 		} catch ( HttpException $e ) {
 			$this->_render_error($e->getCode(), $e->getMessage(), $e->payload );
 		} catch ( \Exception $e ) {
+			var_dump($e);
 			$this->_render_error(500);
 		}
 	}
@@ -85,7 +90,7 @@ class Controller {
 	final protected function _render_error( $error_code, $message = '', $payload = [] ) {
 		$this->db->general_rollback();
 		http_response_code($error_code);
-		if ( $this->route->format == 'html' ) {
+		if ($this->route->format == 'html') {
 			if ($this->container->config()->get('errors.rescue_page')) {
 				$fully_qualified_name = '\\'.$this->container->config()->get('kernel.namespace').'\\UI\\'.ucfirst(strtolower($this->route->subdomain)).'\\ErrorPage';
 				$this->response = new $fully_qualified_name();
