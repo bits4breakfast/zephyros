@@ -8,7 +8,7 @@ namespace Bits4breakfast\Zephyros\Exception\Http;
 	authenticated but that the credentials still do not grant the client permission to access the 
 	resource (e.g., a recognized user attempting to access restricted content).
 */
-class ForbiddenHttpException extends HttpException {
+class ForbiddenException extends HttpException {
 	public function __construct( $message = "", $payload = [] ) {
 		parent::__construct( $message, 403, $payload );
 	}
