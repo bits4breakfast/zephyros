@@ -112,46 +112,41 @@ abstract class UserInterface {
 	public function cache_key() {
 		return 'pages:'.sha1( $_SERVER["REQUEST_URI"] );
 	}
+
+	final public function render() {
+		$this->build();
+				
+		$this->smarty->assign( 'data', (array)$this->data );
+		$this->smarty->assign( 'config', $this->container->config()->dump() );
+		$this->smarty->assign( 'meta_tags', $this->meta_tags );
+		$this->smarty->assign( 'opengraph', $this->opengraph );
+		$this->smarty->assign( 'stylesheets', $this->stylesheets );
+		$this->smarty->assign( 'javascripts', $this->scripts );
+		if (!$this->allow_caching) {
+			$this->smarty->assign( 'flash_message', $this->flash_message );
+		}
+		
+		$output = "";
+		foreach ( $this->templates as $template ) {
+			$output .= $this->smarty->fetch( $template );
+		}
+
+		return $output;
+	}
 	
-	public function output() {
-		if ( $this->allow_caching ) {
+	final public function output() {
+		if ($this->allow_caching) {
 			$key = $this->cache_key();
 		
-			$output = Cache::get( $key );
-			
+			$output = Cache::get($key);
 			if ( $output === false ) {
-				$this->build();
-				
-				$this->smarty->assign( 'data', (array)$this->data );
-				$this->smarty->assign( 'config', $this->container->config()->dump() );
-				$this->smarty->assign( 'meta_tags', $this->meta_tags );
-				$this->smarty->assign( 'opengraph', $this->opengraph );
-				$this->smarty->assign( 'stylesheets', $this->stylesheets );
-				$this->smarty->assign( 'javascripts', $this->scripts );
-				
-				$output = "";
-				foreach ( $this->templates as $template ) {
-					$output .= $this->smarty->fetch( $template );
-				}
-				Cache::set( $key, $output );
+				$output = $this->render();
+				Cache::set($key, $output);
 			}
 			
 			print $output;
-			
 		} else {
-			$this->build();
-			
-			$this->smarty->assign( 'data', (array)$this->data );
-			$this->smarty->assign( 'config', $this->container->config()->dump() );
-			$this->smarty->assign( 'meta_tags', $this->meta_tags );
-			$this->smarty->assign( 'opengraph', $this->opengraph );
-			$this->smarty->assign( 'stylesheets', $this->stylesheets );
-			$this->smarty->assign( 'javascripts', $this->scripts );
-			$this->smarty->assign( 'flash_message', $this->flash_message );
-			
-			foreach ( $this->templates as $template ) {
-				$this->smarty->display( $template );
-			}
+			echo $this->render();
 		}
 	}
 }
