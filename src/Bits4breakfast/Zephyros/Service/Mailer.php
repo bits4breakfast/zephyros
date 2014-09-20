@@ -47,13 +47,13 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	}
 
 	public function from($from) {
-		if ( is_array($from) ) {
-			$this->From = self::cleanLine($from['email']);
-			if ( isset($from['name']) ) {
-				$this->FromName = self::cleanLine($from['name']);
-			}
+		if (is_array($from)) {
+			$this->setFrom(
+				self::cleanLine($from['email']),
+				(isset($from['name']) ? self::cleanLine($from['name']) : '')
+			);
 		} elseif (is_string($from)) {
-			$this->From = self::cleanLine($from);
+			$this->setFrom(self::cleanLine($from));
 		} else {
 			throw new \Exception('Invalid sender');
 		}
