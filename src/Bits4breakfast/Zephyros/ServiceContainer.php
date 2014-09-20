@@ -1,7 +1,15 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
+use Bits4breakfast\Zephyros\Config;
+use Bits4breakfast\Zephyros\ServiceContainer;
+use Bits4breakfast\Zephyros\ServiceContainerDefinitions;
+
 use Monolog\Logger;
+use Bits4breakfast\Zephyros\Service\Mysql;
+use Bits4breakfast\Zephyros\Service\Cache;
+use Bits4breakfast\Zephyros\Service\LanguageManager;
+use Bits4breakfast\Zephyros\Service\MessageBus;
 
 class ServiceContainer {
 
@@ -11,11 +19,11 @@ class ServiceContainer {
 	private $services = [];
 
 	public static function init(Config $config = null, ServiceContainerDefinitions $service_container_definitions = null) {
-		if ( $config == null && self::$instance == null ) {
+		if ($config == null && self::$instance == null) {
 			throw new \InvalidArgumentException( 'config instance cannot be a null reference' );
 		}
 
-		if ( $service_container_definitions == null && self::$instance == null ) {
+		if ($service_container_definitions == null && self::$instance == null) {
 			throw new \InvalidArgumentException( 'service_container_definitions instance cannot be a null reference' );
 		}
 
@@ -30,11 +38,11 @@ class ServiceContainer {
 		$this->service_container_definitions = $service_container_definitions;
 
 		$this->register('bits4brekfast.zephyros.config', $config );
-		$this->register('bits4brekfast.zephyros.logger', new Logger( 'bits4brekfast.zephyros.logger' ) );
-		$this->register('bits4brekfast.zephyros.db', new Service\Mysql( $this ) );
-		$this->register('bits4brekfast.zephyros.cache', new Service\Cache( $this ) );
-		$this->register('bits4brekfast.zephyros.lm', new Service\LanguageManager( $this ) );
-		$this->register('bits4brekfast.zephyros.message_bus', new Service\MessageBus( $this ) );
+		$this->register('bits4brekfast.zephyros.logger', new Logger('bits4brekfast.zephyros.logger') );
+		$this->register('bits4brekfast.zephyros.db', new Mysql($this) );
+		$this->register('bits4brekfast.zephyros.cache', new Cache($this) );
+		$this->register('bits4brekfast.zephyros.lm', new LanguageManager($this) );
+		$this->register('bits4brekfast.zephyros.message_bus', new MessageBus($this) );
 	}
 
 	public function register($service_id, $instance) {
@@ -64,7 +72,7 @@ class ServiceContainer {
 			return $this->services[$service_id];
 		}
 
-		switch ( $service_id ) {
+		switch ($service_id) {
 			case 'logger':
 				return $this->logger();
 			case 'cache':
@@ -75,6 +83,8 @@ class ServiceContainer {
 				return $this->lm();
 			case 'db':
 				return $this->db();
+			case 'mailer':
+				return $this->mailer();
 		}
 
 		if ($class_name = $this->service_container_definitions->get($service_id)) {
@@ -88,7 +98,7 @@ class ServiceContainer {
 			throw new \RuntimeException($class_name.' must implement Bits4breakfast\\Zephyros\\ServiceInterface');
 		}
 
-		throw new \OutOfRangeException( '$service_id was not found' );
+		throw new \OutOfRangeException('$service_id was not found');
 	}
 
 	public function logger() {
@@ -113,5 +123,12 @@ class ServiceContainer {
 
 	public function bus() {
 		return $this->services['bits4brekfast.zephyros.message_bus'];
+	}
+
+	public function mailer() {
+		if (!isset($this->services['bits4brekfast.zephyros.mailer'])) {
+			$this->register('bits4brekfast.zephyros.mailer', new Service\Mailer($this));
+		}
+		return $this->services['bits4brekfast.zephyros.mailer'];
 	}
 }
