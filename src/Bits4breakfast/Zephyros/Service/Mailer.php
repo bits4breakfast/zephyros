@@ -55,7 +55,7 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 		} elseif (is_string($from)) {
 			$this->From = self::cleanLine($from);
 		} else {
-			throw new Exception('Invalid sender');
+			throw new \Exception('Invalid sender');
 		}
 
 		return $this;
