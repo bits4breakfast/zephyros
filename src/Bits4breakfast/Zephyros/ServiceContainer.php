@@ -20,11 +20,11 @@ class ServiceContainer {
 
 	public static function init(Config $config = null, ServiceContainerDefinitions $service_container_definitions = null) {
 		if ($config == null && self::$instance == null) {
-			throw new \InvalidArgumentException( 'config instance cannot be a null reference' );
+			throw new \InvalidArgumentException('config instance cannot be a null reference');
 		}
 
 		if ($service_container_definitions == null && self::$instance == null) {
-			throw new \InvalidArgumentException( 'service_container_definitions instance cannot be a null reference' );
+			throw new \InvalidArgumentException('service_container_definitions instance cannot be a null reference');
 		}
 
 		if (self::$instance === null) {
@@ -37,25 +37,25 @@ class ServiceContainer {
 	private function __construct(Config $config, ServiceContainerDefinitions $service_container_definitions) {
 		$this->service_container_definitions = $service_container_definitions;
 
-		$this->register('bits4brekfast.zephyros.config', $config );
-		$this->register('bits4brekfast.zephyros.logger', new Logger('bits4brekfast.zephyros.logger') );
-		$this->register('bits4brekfast.zephyros.db', new Mysql($this) );
-		$this->register('bits4brekfast.zephyros.cache', new Cache($this) );
-		$this->register('bits4brekfast.zephyros.lm', new LanguageManager($this) );
-		$this->register('bits4brekfast.zephyros.message_bus', new MessageBus($this) );
+		$this->register('bits4brekfast.zephyros.config', $config);
+		$this->register('bits4brekfast.zephyros.logger', new Logger('bits4brekfast.zephyros.logger'));
+		$this->register('bits4brekfast.zephyros.db', new Mysql($this));
+		$this->register('bits4brekfast.zephyros.cache', new Cache($this));
+		$this->register('bits4brekfast.zephyros.lm', new LanguageManager($this));
+		$this->register('bits4brekfast.zephyros.message_bus', new MessageBus($this));
 	}
 
 	public function register($service_id, $instance) {
 		if (empty($service_id)) {
-			throw new \InvalidArgumentException( 'service_id cannot be an empty string' );
+			throw new \InvalidArgumentException('service_id cannot be an empty string');
 		}
 
 		if ($instance == null) {
-			throw new \InvalidArgumentException( 'instance cannot be a null reference' );
+			throw new \InvalidArgumentException('instance cannot be a null reference');
 		}
 
 		if (isset($this->services[$service_id])) {
-			throw new \InvalidArgumentException( 'you cannot replace '.$service_id.' with another instance' );	
+			throw new \InvalidArgumentException('you cannot replace '.$service_id.' with another instance');	
 		}
 
 		$this->services[$service_id] = $instance;
@@ -65,7 +65,7 @@ class ServiceContainer {
 
 	public function get($service_id) {
 		if (empty($service_id)) {
-			throw new \InvalidArgumentException( 'service_id cannot be an empty string' );
+			throw new \InvalidArgumentException('service_id cannot be an empty string');
 		}
 
 		if (isset($this->services[$service_id])) {
