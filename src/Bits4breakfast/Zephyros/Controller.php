@@ -50,6 +50,10 @@ class Controller {
 		}
 	}
 
+	final public function get($service_id) {
+		return $this->container->get($service_id);
+	}
+
 	final public function request() {
 		if ($this->request === null) {
 			$this->request = Request::createFromGlobals();
