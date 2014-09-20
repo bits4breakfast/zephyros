@@ -8,7 +8,7 @@ class Config {
 
 	public $configuration = [];
 
-	public function __construct( $app_base_path, $subdomain, $environment = 'dev' ) {
+	public function __construct($app_base_path, $subdomain, $environment = 'dev') {
 		$this->app_base_path = $app_base_path;
 		$this->subdomain = $subdomain;
 		$this->environment = $environment;
@@ -17,10 +17,10 @@ class Config {
 
 	public function load() {
 		$key = $this->app_base_path.':'.$this->subdomain.':config';
-		if ( ($this->configuration = apc_fetch($key) ) === false ) {
+		if (($this->configuration = apc_fetch($key)) === false) {
 			foreach ( ['', '_'.$this->environment, '_'.$this->subdomain] as $prefix) {
-				if ( file_exists($this->app_base_path.'/app/config/config'.$prefix.'.json') ) {
-					$configuration = json_decode( file_get_contents($this->app_base_path.'/app/config/config'.$prefix.'.json'), true );
+				if (file_exists($this->app_base_path.'/app/config/config'.$prefix.'.json')) {
+					$configuration = json_decode(file_get_contents($this->app_base_path.'/app/config/config'.$prefix.'.json'), true);
 					foreach ($configuration as $key => $value) {
 						$this->configuration[$key] = $value;
 					}
@@ -32,7 +32,7 @@ class Config {
 	}
 
 	public function get( $key ) {
-		if ( isset($this->configuration[$key]) ) {
+		if (isset($this->configuration[$key])) {
 			return $this->configuration[$key];
 		}
 
@@ -41,5 +41,9 @@ class Config {
 
 	public function dump() {
 		return $this->configuration;
+	}
+
+	public function is_dev() {
+		return ($this->environment == 'dev');
 	}
 }

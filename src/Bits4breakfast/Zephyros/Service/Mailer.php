@@ -16,16 +16,17 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 
 		parent::__construct(true);
 
-		if ( DEV_ENVIRONMENT ) {
+		$config = $this->container->config();
+		if ($config->is_dev()) {
 			$this->IsMail();
 		} else {
 			$this->setSMTP(
-				$this->container->config()->get('mailer.smpt_auth'),
-				$this->container->config()->get('mailer.smpt_host'),
-				$this->container->config()->get('mailer.smpt_user'),
-				$this->container->config()->get('mailer.smpt_password'),
-				$this->container->config()->get('mailer.smpt_secure'),
-				$this->container->config()->get('mailer.smpt_port')
+				$config->get('mailer.smpt_auth'),
+				$config->get('mailer.smpt_host'),
+				$config->get('mailer.smpt_user'),
+				$config->get('mailer.smpt_password'),
+				$config->get('mailer.smpt_secure'),
+				$config->get('mailer.smpt_port')
 			);
 		}
 	}
