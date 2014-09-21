@@ -74,12 +74,18 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	}
 
 	public function to($recipient) {
-		if (is_array($recipient)) {
+		if (isset($recipient['name']) && isset($recipient['email'])) {
+			$this->addAddress(self::cleanLine($recipient['email']), $recipient['name']);
+		} else if (is_array($recipient)) {
 			foreach ($recipient as $to) {
-				$this->AddAddress( self::cleanLine($to) );
+				if (isset($to['name']) && isset($to['email'])) {
+					$this->addAddress(self::cleanLine($to['email']), $to['name']);
+				} else {
+					$this->addAddress(self::cleanLine($to));
+				}
 			}
 		} else {
-			$this->AddAddress( self::cleanLine($recipient) );
+			$this->addAddress(self::cleanLine($recipient));
 		}
 
 		return $this;
@@ -89,10 +95,10 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 		if (isset($cc)) {
 			if (is_array($cc)) {
 				foreach ($cc as $to) {
-					parent::AddCC( self::cleanLine($to) );
+					$this->addCC(self::cleanLine($to));
 				}
 			} else {
-				parent::AddCC( self::cleanLine($cc) );
+				$this->addCC(self::cleanLine($cc));
 			}
 		}
 
@@ -102,10 +108,10 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	public function toBCC($bcc) {
 		if (is_array($bcc)) {
 			foreach ($bcc as $to) {
-				parent::AddBCC( self::cleanLine($to) );
+				$this->addBCC(self::cleanLine($to));
 			}
 		} else {
-			parent::AddBCC( self::cleanLine($bcc) );
+			$this->addBCC(self::cleanLine($bcc));
 		}
 
 		return $this;
@@ -114,10 +120,10 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	public function attach($attachment) {
 		if (is_array($attachment)) {
 			foreach ($attachment as $file) {
-				parent::AddAttachment($file);
+				$this->addAttachment($file);
 			}
 		} else {
-			parent::AddAttachment($attachment);
+			$this->addAttachment($attachment);
 		}
 
 		return $this;
@@ -126,17 +132,17 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	public function replyTo($replyto) {
 		if (is_array($replyto)) {
 			foreach ($replyto as $to) {
-				parent::AddReplyTo( self::cleanLine($to['email']), self::cleanLine($to['name']) );
+				$this->addReplyTo(self::cleanLine($to['email']), self::cleanLine($to['name']));
 			}
 		} else {
-			parent::AddReplyTo( self::cleanLine($replyto['email']), self::cleanLine($replyto['name']) );
+			$this->addReplyTo(self::cleanLine($replyto['email']), self::cleanLine($replyto['name']));
 		}
 
 		return $this;
 	}
 
 	public function isHTML($ishtml = true) {
-		parent::IsHTML($ishtml);
+		parent::isHTML($ishtml);
 
 		return $this;
 	}
@@ -147,11 +153,11 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 		$this->Username = $user;
 		$this->Password = $pass;
 		$this->Port = $port;
-		if ( $secure == 'ssl' || $secure == 'tls' ) {
+		if ($secure == 'ssl' || $secure == 'tls') {
 			$this->SMTPSecure = $secure;
 		}
 
-		if ( $this->SMTPAuth !== null && $this->Host !== null && $this->Username !== null && $this->Password !== null ) {
+		if ($this->SMTPAuth !== null && $this->Host !== null && $this->Username !== null && $this->Password !== null) {
 			$this->IsSMTP();
 		}
 	}
