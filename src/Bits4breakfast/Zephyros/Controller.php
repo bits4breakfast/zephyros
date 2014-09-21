@@ -37,7 +37,7 @@ class Controller {
 			header("Content-type: text/json");
 		}
 		
-		$lang = ( isset($_GET['lang']) && trim($_GET['lang']) != '' && strlen($_GET['lang']) == 2 ? $_GET['lang'] : 'en' );
+		$lang = (isset($_GET['lang']) && trim($_GET['lang']) != '' && strlen($_GET['lang']) == 2 ? $_GET['lang'] : 'en');
 		$allowed_languages = $this->config->get('kernel.allowed_languages');
 		if ($allowed_languages === NULL || ($allowed_languages && !in_array($lang, $allowed_languages))) {
 			$lang = 'en';
@@ -83,15 +83,17 @@ class Controller {
 			} else {
 				throw new NotFoundException();
 			}
-		} catch ( HttpException $e ) {
+		} catch (HttpException $e) {
 			$this->_render_error($e->getCode(), $e->getMessage(), $e->payload );
-		} catch ( \Exception $e ) {
-			var_dump($e);
+		} catch (\Exception $e) {
+			if ($this->config->is_dev()) {
+				var_dump($e);
+			}
 			$this->_render_error(500);
 		}
 	}
 
-	final protected function _render_error( $error_code, $message = '', $payload = [] ) {
+	final protected function _render_error($error_code, $message = '', $payload = []) {
 		$this->db->general_rollback();
 		http_response_code($error_code);
 		if ($this->route->format == 'html') {
@@ -104,7 +106,7 @@ class Controller {
 				$this->generate_output();
 			}
 		} else {
-			$this->response( 'ERROR', $payload );
+			$this->response('ERROR', $payload);
 		}
 	}
 
