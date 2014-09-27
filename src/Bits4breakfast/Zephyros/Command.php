@@ -10,7 +10,6 @@ class Command extends BaseCommand
     public static $app_base_path;
 
     protected $environemnt = 'dev';
-    protected $app_base_path;
 
     protected $config = null;
     protected $container = null;
