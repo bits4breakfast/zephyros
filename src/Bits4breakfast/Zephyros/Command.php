@@ -24,7 +24,7 @@ class Command extends BaseCommand
 	protected function initialize(InputInterface $input, OutputInterface $output) 
 	{
 		$this->environemnt = $input->getParameterOption('env', 'dev');
-		$this->app_base_path = realpath(getcwd().'/../../..');
+		$this->app_base_path = realpath(getcwd().'/..');
 
 		$this->config = new Config($this->app_base_path, 'console-commands', $this->environemnt);
 
