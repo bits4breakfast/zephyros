@@ -39,7 +39,6 @@ class ServiceContainer {
 
 		$this->register('bits4brekfast.zephyros.config', $config);
 		$this->register('bits4brekfast.zephyros.logger', new Logger('bits4brekfast.zephyros.logger'));
-		$this->register('bits4brekfast.zephyros.db', new Mysql($this));
 		$this->register('bits4brekfast.zephyros.cache', new Cache($this));
 		$this->register('bits4brekfast.zephyros.lm', new LanguageManager($this));
 		$this->register('bits4brekfast.zephyros.message_bus', new MessageBus($this));
@@ -118,6 +117,9 @@ class ServiceContainer {
 	}
 
 	public function db() {
+		if (!isset($this->services['bits4brekfast.zephyros.db'])) {
+			$this->register('bits4brekfast.zephyros.db', new Mysql($this));
+		}
 		return $this->services['bits4brekfast.zephyros.db'];
 	}
 
