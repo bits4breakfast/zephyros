@@ -18,7 +18,12 @@ class Config {
 	public function load() {
 		$key = $this->app_base_path.':'.$this->subdomain.':config';
 		if (($this->configuration = apc_fetch($key)) === false) {
-			foreach ( ['', '_'.$this->environment, '_'.$this->subdomain] as $prefix) {
+			foreach ([
+				'', 
+				'_'.$this->environment, 
+				'_'.$this->subdomain, 
+				'_'.$this->subdomain.'_'.$this->environment
+			] as $prefix) {
 				if (file_exists($this->app_base_path.'/app/config/config'.$prefix.'.json')) {
 					$configuration = json_decode(file_get_contents($this->app_base_path.'/app/config/config'.$prefix.'.json'), true);
 					foreach ($configuration as $key => $value) {
