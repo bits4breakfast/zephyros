@@ -14,15 +14,6 @@ class Command extends BaseCommand
     protected $config = null;
     protected $container = null;
 
-    protected function configure() 
-    {
-        $this->addOption(
-            'env',
-            InputArgument::OPTIONAL,
-            'Indicate environment (default to "dev")'
-        );
-    }
-
     protected function initialize(InputInterface $input, OutputInterface $output) 
     {
         $this->environemnt = $input->getParameterOption('env', 'dev');
