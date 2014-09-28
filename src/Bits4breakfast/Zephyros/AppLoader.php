@@ -26,8 +26,8 @@ final class AppLoader {
 	}
 
 	public function boot() {
-		if ( isset($_ENV['ZEPHYROS_APP_ENVIRONMENT']) ) {
-			$this->environemnt = $_ENV['ZEPHYROS_APP_ENVIRONMENT'];
+		if (getenv('ZEPHYROS_APP_ENVIRONMENT')) {
+			$this->environemnt = getenv('ZEPHYROS_APP_ENVIRONMENT');
 		} else {
 			$this->environemnt = 'dev';
 		}
