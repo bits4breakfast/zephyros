@@ -17,11 +17,10 @@ class Command extends BaseCommand
     protected function initialize(InputInterface $input, OutputInterface $output) 
     {
         $this->environment = $input->getOption('env', 'dev');
-        $this->app_base_path = self::$app_base_path;
 
-        $this->config = new Config($this->app_base_path, 'console-commands', $this->environment);
+        $this->config = new Config(self::$app_base_path, 'console-commands', $this->environment);
 
-        $services = new ServiceContainerDefinitions($this->app_base_path);
+        $services = new ServiceContainerDefinitions(self::$app_base_path);
         $this->container = ServiceContainer::init($this->config, $services);
     }
 }
