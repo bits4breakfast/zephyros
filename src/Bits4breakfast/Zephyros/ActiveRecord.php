@@ -541,7 +541,9 @@ abstract class ActiveRecord {
 
 			foreach ($filters as $filter) {
 				$test = true;
-				if ($filter::NAME == 'NOTEMPTY') {
+				if ($filter::NAME == 'DONT_VALIDATE') {
+					;
+				} else if ($filter::NAME == 'NOTEMPTY') {
 					$test = !empty($value);
 				} else if ($filter::NAME == 'UNIQUE') {
 					if (trim($value) !== '') {

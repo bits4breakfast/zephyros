@@ -25,7 +25,7 @@ class Config {
 				'_'.$this->subdomain.'_'.$this->environment
 			] as $prefix) {
 				if (file_exists($this->app_base_path.'/app/config/config'.$prefix.'.json')) {
-					$configuration = json_decode(file_get_contents($this->app_base_path.'/app/config/config'.$prefix.'.json'), true);
+					$configuration = (array)json_decode(file_get_contents($this->app_base_path.'/app/config/config'.$prefix.'.json'), true);
 					foreach ($configuration as $key => $value) {
 						$this->configuration[$key] = $value;
 					}
