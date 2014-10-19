@@ -547,7 +547,8 @@ abstract class ActiveRecord {
 					$test = !empty($value);
 				} else if ($filter::NAME == 'UNIQUE') {
 					if (trim($value) !== '') {
-						$test = (self::find(self::first, [$key => $value]) === null);
+						$record = self::find(self::first, [$key => $value]); 
+						$test = ($record === null || ($record !== null && $record->id == $this->_data['id']));
 					}
 				} else if ($filter::NAME == 'CALLBACK') {
 					$test = filter_var($value, FILTER_CALLBACK, ['options' => $filter->callback]);

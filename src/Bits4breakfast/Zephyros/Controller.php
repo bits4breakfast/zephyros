@@ -84,7 +84,7 @@ class Controller {
 				throw new NotFoundException();
 			}
 		} catch (HttpException $e) {
-			$this->_render_error($e->getCode(), $e->getMessage(), $e->payload );
+			$this->_render_error($e->getCode(), $e->getMessage(), $e->payload);
 		} catch (\Exception $e) {
 			if ($this->config->is_dev()) {
 				var_dump($e);
@@ -97,13 +97,12 @@ class Controller {
 		$this->db->general_rollback();
 		http_response_code($error_code);
 		if ($this->route->format == 'html') {
-			if ($this->container->config()->get('errors.rescue_page')) {
-				$fully_qualified_name = '\\'.$this->container->config()->get('kernel.namespace').'\\UI\\'.ucfirst(strtolower($this->route->subdomain)).'\\ErrorPage';
-				$this->response = new $fully_qualified_name();
+			if ($this->container->config()->get('errors_rescue_page')) {
+				$rescue_page_name = $this->container->config()->get('errors_rescue_page');
+				$this->response = new $rescue_page_name();
 				$this->response->error_code = $error_code;
 				$this->response->message = $message;
 				$this->response->payload = $payload;
-				$this->generate_output();
 			}
 		} else {
 			$this->response('ERROR', $payload);
