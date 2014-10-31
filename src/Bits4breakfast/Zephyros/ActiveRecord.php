@@ -489,8 +489,8 @@ abstract class ActiveRecord {
 			$sanitize_schema = $this->sanitize_schema();
 		}
 		foreach ($patching_schema as $key) {
-			if (!isset($patch[$key])) {
-				$value = null;
+			if (!array_key_exists($key, $patch)) {
+				continue;
 			} else {
 				$value = $patch[$key];
 			}
