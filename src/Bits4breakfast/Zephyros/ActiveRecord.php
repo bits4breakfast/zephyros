@@ -269,7 +269,7 @@ abstract class ActiveRecord {
 				$query .= ' ORDER BY '.$options['orderby'];
 			}
 			
-			if ( isset($options['limit']) ) {
+			if (isset($options['limit']) && $options['limit'] > 0) {
 				$start = isset($options['start']) ? (int) $options['start'] : 0;
 				$query .= ' LIMIT '.$start.','.$options['limit'];
 			}
