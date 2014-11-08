@@ -38,7 +38,19 @@ class ServiceContainer {
 		$this->service_container_definitions = $service_container_definitions;
 
 		$this->register('bits4brekfast.zephyros.config', $config);
-		$this->register('bits4brekfast.zephyros.logger', new Logger('bits4brekfast.zephyros.logger'));
+
+		$logger = new Logger($config->get('kernel_app_id').$config->subdomain);
+		if (!empty($config->get('log.dir_path'))) {
+			$logger->pushHandler(
+				new \Monolog\Handler\StreamHandler(
+					$config->get('log.dir_path').'/'.@date('Y-m-d').'.log', 
+					($config->get('log.level') ? $config->get('log.level') : 500)
+				)
+			);
+		}
+
+		$this->register('bits4brekfast.zephyros.logger', $logger);
+		
 		$this->register('bits4brekfast.zephyros.cache', new Cache($this));
 		$this->register('bits4brekfast.zephyros.message_bus', new MessageBus($this));
 	}

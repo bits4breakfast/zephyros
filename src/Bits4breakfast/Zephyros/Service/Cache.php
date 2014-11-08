@@ -38,6 +38,8 @@ class Cache implements ServiceInterface {
 	}
 
 	public function exists($key) {
+		$key = $this->app_id.':'.$key;
+		
 		return (apc_exists($key) || $this->memcache->append($key, null));
 	}
 	
