@@ -505,9 +505,10 @@ abstract class ActiveRecord {
 	}
 
 	final public function validate( $validation_schema = 'default' ) {
-		$validation_schema = null;
 		if (method_exists($this, 'validation_schema')) {
 			$validation_schema = $this->validation_schema($validation_schema);
+		} else {
+			$validation_schema = null;
 		}
 		
 		if (empty($validation_schema)) {
