@@ -326,7 +326,7 @@ abstract class ActiveRecord {
 	}
 	
 	private function _load( $strict = false ) {
-		if ( ( !isset($this->do_not_cache) || (isset($this->do_not_cache) && !$this->do_not_cache ) ) && $this->_isCached() ) {
+		if ( ( !isset($this->do_not_cache) || (isset($this->do_not_cache) && !$this->do_not_cache ) ) && $this->is_cached() ) {
 			if ( method_exists( $this, 'before_restoring' ) ) {
 				$this->before_restoring();
 			}
@@ -656,7 +656,7 @@ abstract class ActiveRecord {
 			}
 			
 			if ( !isset($this->do_not_cache) || ( isset($this->do_not_cache) && !$this->do_not_cache ) ) {
-				$this->_clearCache();
+				$this->clear_cache();
 			}
 
 			if ( method_exists( $this, 'after_saving' ) ) {
@@ -709,11 +709,11 @@ abstract class ActiveRecord {
 		}
 		
 		if ( !isset($this->do_not_cache) || ( isset($this->do_not_cache) && !$this->do_not_cache ) ) {
-			$this->_clearCache();
+			$this->clear_cache();
 		}
 	}
 	
-	private function _isCached() {
+	private function is_cached() {
 		return $this->_container->cache()->exists( 'ar:'.$this->_class.':'.$this->_data['id'] );
 	}
 	
