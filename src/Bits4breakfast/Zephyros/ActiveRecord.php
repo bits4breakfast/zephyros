@@ -258,11 +258,11 @@ abstract class ActiveRecord {
 			$query = substr($query,0,-5);
 		}
 		
-		$query = 'SELECT id FROM '.( trim($temp->_database) != '' ? '`'.$temp->_database.'`.' : '' ).'`'.$temp->_table.'`'.( empty($conditions) ? '' : ' WHERE '.$query );
+		$query = 'SELECT `'.$temp->_identifier.'` FROM '.( trim($temp->_database) != '' ? '`'.$temp->_database.'`.' : '' ).'`'.$temp->_table.'`'.( empty($conditions) ? '' : ' WHERE '.$query );
 		if ( $what == self::first ) {
 			$query .= ' LIMIT 1';
 		} else if ( $what == self::last ) {
-			$query .= ' ORDER BY `id` DESC LIMIT 1';
+			$query .= ' ORDER BY `'.$temp->_identifier.'` DESC LIMIT 1';
 		} else if ( $what == self::random ) {
 			$query .= ' ORDER BY RAND() LIMIT 1';
 		} else {
