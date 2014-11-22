@@ -1,9 +1,9 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-use Bits4breakfast\Zephyros\Config;
+use Bits4breakfast\Zephyros\ConfigInterface;
 use Bits4breakfast\Zephyros\ServiceContainer;
-use Bits4breakfast\Zephyros\ServiceContainerDefinitions;
+use Bits4breakfast\Zephyros\ServiceContainerDefinitionsInterface;
 
 use Monolog\Logger;
 use Bits4breakfast\Zephyros\Service\Mysql;
@@ -18,7 +18,7 @@ class ServiceContainer {
 	private $service_container_definitions = null;
 	private $services = [];
 
-	public static function init(Config $config = null, ServiceContainerDefinitions $service_container_definitions = null) {
+	public static function init(ConfigInterface $config = null, ServiceContainerDefinitionsInterface $service_container_definitions = null) {
 		if ($config == null && self::$instance == null) {
 			throw new \InvalidArgumentException('config instance cannot be a null reference');
 		}
@@ -34,7 +34,7 @@ class ServiceContainer {
 		return self::$instance;
 	}
 
-	private function __construct(Config $config, ServiceContainerDefinitions $service_container_definitions) {
+	private function __construct(ConfigInterface $config, ServiceContainerDefinitionsInterface $service_container_definitions) {
 		$this->service_container_definitions = $service_container_definitions;
 
 		$this->register('bits4brekfast.zephyros.config', $config);

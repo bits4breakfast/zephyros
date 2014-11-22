@@ -1,7 +1,7 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-class Config {
+class Config implements ConfigInterface {
 	public $app_base_path = '';
 	public $subdomain = '';
 	public $environment = '';
