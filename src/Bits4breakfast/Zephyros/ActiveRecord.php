@@ -285,7 +285,7 @@ abstract class ActiveRecord {
 			}
 			
 			if ( $what == self::first || $what == self::last || $what == self::random ) {
-				$temp = new $calledClass( $result->fetch_object()->{$this->_identifier} );
+				$temp = new $calledClass( $result->fetch_object()->{$temp->_identifier} );
 				$result->free();
 				return $temp;
 			} else {
