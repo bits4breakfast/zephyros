@@ -25,6 +25,7 @@ abstract class ActiveRecord {
 	protected $_class = '';
 	protected $_name = '';
 	protected $_table = '';
+	protected $_identifier = 'id';
 	protected $_fkName = '';
 	protected $_columns = [];
 	protected $_didLoad = true;
@@ -62,9 +63,9 @@ abstract class ActiveRecord {
 		if ( $id !== NULL ) {
 			if ( is_scalar($id) ) {
 				if ( is_numeric($id) ) {
-					$this->_data['id'] = (int) $id;
+					$this->_data[$this->_identifier] = (int) $id;
 				} else {
-					$this->_data['id'] = trim($id);
+					$this->_data[$this->_identifier] = trim($id);
 				}
 				
 				if ( $load ) {
@@ -284,7 +285,7 @@ abstract class ActiveRecord {
 			}
 			
 			if ( $what == self::first || $what == self::last || $what == self::random ) {
-				$temp = new $calledClass( $result->fetch_object()->id );
+				$temp = new $calledClass( $result->fetch_object()->{$this->_identifier} );
 				$result->free();
 				return $temp;
 			} else {
@@ -340,7 +341,7 @@ abstract class ActiveRecord {
 			if ( method_exists( $this, 'before_loading' ) ) {
 				$this->before_loading();
 			}
-			$queryStr = 'SELECT * FROM '.$this->_table.' WHERE id = "'.$this->_db->escape($this->_data['id']).'" LIMIT 1';
+			$queryStr = 'SELECT * FROM '.$this->_table.' WHERE '.$this->_identifier.' = "'.$this->_db->escape($this->_data[$this->_identifier]).'" LIMIT 1';
 			$query = $this->_db->pick($this->_shard)->read($queryStr);
 			if ( $query != null ) {
 				$record = $query->fetch_object();
@@ -350,7 +351,7 @@ abstract class ActiveRecord {
 					}
 				} else {
 					if ( $strict ) {
-						throw new NonExistingItemException(sprintf("Record with id %s not found in table '%s'.", $this->_data['id'], $this->_table));
+						throw new NonExistingItemException(sprintf("Record with id %s not found in table '%s'.", $this->_data[$this->_identifier], $this->_table));
 					}
 				}
 			} else {
@@ -375,10 +376,10 @@ abstract class ActiveRecord {
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
-						$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'" LIMIT 1');
+						$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data[$this->_identifier]).'" LIMIT 1');
 						$this->_related[$relation] = ( $query->num_rows > 0 ? (object) $query->fetch_object() : null );
 					} else {
-						$this->_related[$relation] = $this->_db->pick($this->_shard)->result('SELECT id FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'" LIMIT 1');
+						$this->_related[$relation] = $this->_db->pick($this->_shard)->result('SELECT id FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data[$this->_identifier]).'" LIMIT 1');
 					}
 				}
 			}
@@ -400,7 +401,7 @@ abstract class ActiveRecord {
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					
 					if ( isset($details['is_dependent']) && $details['is_dependent'] ) {
-						$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'"');
+						$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data[$this->_identifier]).'"');
 						if ( $query != null ) {
 							while ( $record = $query->fetch_object() ) {
 								$this->_related[$key][] = $record;
@@ -410,7 +411,7 @@ abstract class ActiveRecord {
 						}
 					} else {
 						$field_name = ( isset($details['field_name']) ? $details['field_name'] : 'id' );
-						$query = $this->_db->pick($this->_shard)->read('SELECT '.$field_name.' FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'"');
+						$query = $this->_db->pick($this->_shard)->read('SELECT '.$field_name.' FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data[$this->_identifier]).'"');
 						if ( $query != null ) {
 							while ( list($record) = $query->fetch_row() ) {
 								$this->_related[$key][] = $record;
@@ -439,7 +440,7 @@ abstract class ActiveRecord {
 					$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 					$field_name = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
 					
-					$query = $this->_db->pick($this->_shard)->read('SELECT '.$field_name.' FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data['id']).'"');
+					$query = $this->_db->pick($this->_shard)->read('SELECT '.$field_name.' FROM '.$table_name.' WHERE '.$fk.' = "'.$this->_db->escape($this->_data[$this->_identifier]).'"');
 					if ( $query != null ) {
 						while ( list($record) = $query->fetch_row() ) {
 							$this->_related[$key][] = $record;
@@ -452,7 +453,7 @@ abstract class ActiveRecord {
 			
 			if ( isset($this->is_localized) && $this->is_localized ) {
 				$this->_localized = [];
-				$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$this->_table.'_localized WHERE '.$this->_fkName.' = '.$this->_data['id']);
+				$query = $this->_db->pick($this->_shard)->read('SELECT * FROM '.$this->_table.'_localized WHERE '.$this->_fkName.' = '.$this->_data[$this->_identifier]);
 				if ( $query != null ) {
 					while ( $record = $query->fetch_object() ) {
 						$lang = $record->lang;
@@ -549,7 +550,7 @@ abstract class ActiveRecord {
 				} else if ($filter::NAME == 'UNIQUE') {
 					if (trim($value) !== '') {
 						$record = self::find(self::first, [$key => $value]); 
-						$test = ($record === null || ($record !== null && $record->id == $this->_data['id']));
+						$test = ($record === null || ($record !== null && $record->{$this->_identifier} == $this->_data[$this->_identifier]));
 					}
 				} else if ($filter::NAME == 'CALLBACK') {
 					$test = filter_var($value, FILTER_CALLBACK, ['options' => $filter->callback]);
@@ -582,9 +583,9 @@ abstract class ActiveRecord {
 			
 			$this->_db->pick($this->_shard)->upsert( $this->_table, $this->_data, (isset($this->columns_to_increment)?$this->columns_to_increment:null) );
 			
-			if ( ( !isset($this->_data['id']) || ( isset($this->_data['id']) && $this->_data['id'] == 0 ) ) && ( !isset($this->has_composite_primary_key) || ( isset($this->has_composite_primary_key) && !$this->has_composite_primary_key ) ) ) {
-				$this->_data['id'] = (int) $this->_db->pick($this->_shard)->last_id();
-				if ( $this->_data['id'] == 0 ) {
+			if ( ( !isset($this->_data[$this->_identifier]) || ( isset($this->_data[$this->_identifier]) && $this->_data[$this->_identifier] == 0 ) ) && ( !isset($this->has_composite_primary_key) || ( isset($this->has_composite_primary_key) && !$this->has_composite_primary_key ) ) ) {
+				$this->_data[$this->_identifier] = (int) $this->_db->pick($this->_shard)->last_id();
+				if ( $this->_data[$this->_identifier] == 0 ) {
 					throw new PersistingErrorException();
 				}
 			}
@@ -606,9 +607,9 @@ abstract class ActiveRecord {
 							
 							$record = (array)$this->_related[strtolower($relation)];
 							if ( empty($record) ) {
-								$this->_db->pick($this->_shard)->delete( $table_name, [ $fk => $this->_data['id'] ] );
+								$this->_db->pick($this->_shard)->delete( $table_name, [ $fk => $this->_data[$this->_identifier] ] );
 							} else {
-								$record = array_merge( [ $fk => $this->_data['id'] ], $record );
+								$record = array_merge( [ $fk => $this->_data[$this->_identifier] ], $record );
 								$this->_db->pick($this->_shard)->upsert( $table_name, $record );
 							}
 						}
@@ -638,19 +639,19 @@ abstract class ActiveRecord {
 						$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 						$field_name = ( isset($details['field_name']) ? $details['field_name'] : strtolower($relation).'_id' );
 						
-						$this->_db->pick($this->_shard)->delete( $table_name, [ $fk => $this->_data['id'] ] );
+						$this->_db->pick($this->_shard)->delete( $table_name, [ $fk => $this->_data[$this->_identifier] ] );
 						foreach ( $this->_related[$key] as $recordId ) {
-							$this->_db->pick($this->_shard)->insert( $table_name, [ $fk => $this->_data['id'], $field_name => $recordId ] );
+							$this->_db->pick($this->_shard)->insert( $table_name, [ $fk => $this->_data[$this->_identifier], $field_name => $recordId ] );
 						}
 					}
 				}
 			}
 			
 			if ( isset($this->is_localized) && $this->is_localized ) {
-				$this->_db->pick($this->_shard)->delete( $this->_table.'_localized', [ $this->_fkName => $this->_data['id'] ] );
+				$this->_db->pick($this->_shard)->delete( $this->_table.'_localized', [ $this->_fkName => $this->_data[$this->_identifier] ] );
 				foreach ( $this->_localized as $lang => $record ) {
 					$record = (array) $record;
-					$record = array_merge( [ $this->_fkName => $this->_data['id'], 'lang' => $lang ], $record );
+					$record = array_merge( [ $this->_fkName => $this->_data[$this->_identifier], 'lang' => $lang ], $record );
 					$this->_db->pick($this->_shard)->insert( $this->_table.'_localized', $record );
 				}
 			}
@@ -663,7 +664,7 @@ abstract class ActiveRecord {
 				$this->after_saving();
 			}
 			
-			return $this->_data['id'];
+			return $this->_data[$this->_identifier];
 		}
 	}
 	
@@ -680,15 +681,15 @@ abstract class ActiveRecord {
 
 			$fk = ( isset($details['foreign_key']) && !empty($details['foreign_key']) ? $details['foreign_key'] : $this->_fkName );
 			
-			$this->_db->pick($this->_shard)->delete( $table_name, [$fk => $this->_data['id'] ] );
+			$this->_db->pick($this->_shard)->delete( $table_name, [$fk => $this->_data[$this->_identifier] ] );
 			foreach ( $this->_related[$key] as $record ) {
 				if ( is_array($record) ) {
 					unset($record[$fk]);
-					$record = array_merge( [$fk => $this->_data['id']], $reco );
+					$record = array_merge( [$fk => $this->_data[$this->_identifier]], $reco );
 				} else {
 					$record = (array)$record;
 					unset($record[$fk]);
-					$record = array_merge( [$fk => $this->_data['id']], $reco );
+					$record = array_merge( [$fk => $this->_data[$this->_identifier]], $reco );
 				}
 				
 				$this->_db->pick($this->_shard)->insert( $table_name, $record );
@@ -702,7 +703,7 @@ abstract class ActiveRecord {
 			$this->before_deleting();
 		}
 		
-		$this->_db->pick($this->_shard)->delete( $this->_table, ['id' => $this->_data['id'] ] );
+		$this->_db->pick($this->_shard)->delete( $this->_table, [$this->_identifier => $this->_data[$this->_identifier] ] );
 		
 		if ( method_exists( $this, 'after_deleting' ) ) {
 			$this->after_deleting();
@@ -714,11 +715,11 @@ abstract class ActiveRecord {
 	}
 	
 	private function is_cached() {
-		return $this->_container->cache()->exists( 'ar:'.$this->_class.':'.$this->_data['id'] );
+		return $this->_container->cache()->exists( 'ar:'.$this->_class.':'.$this->_data[$this->_identifier] );
 	}
 	
 	final public function read_from_cache() {
-		$obj = $this->_container->cache()->get( 'ar:'.$this->_class.':'.$this->_data['id'] );
+		$obj = $this->_container->cache()->get( 'ar:'.$this->_class.':'.$this->_data[$this->_identifier] );
 		
 		if( $obj === false ) {
 			return;
@@ -732,11 +733,11 @@ abstract class ActiveRecord {
 	}
 	
 	final public function write_to_cache() {
-		$this->_container->cache()->set( 'ar:'.$this->_class.':'.$this->_data['id'], $this, 7200 );
+		$this->_container->cache()->set( 'ar:'.$this->_class.':'.$this->_data[$this->_identifier], $this, 7200 );
 	}
 	
 	final public function clear_cache() {
-		$this->_container->cache()->delete( 'ar:'.$this->_class.':'.$this->_data['id'] );
+		$this->_container->cache()->delete( 'ar:'.$this->_class.':'.$this->_data[$this->_identifier] );
 	}
 	
 	final public function _snapshot() {
@@ -752,7 +753,7 @@ abstract class ActiveRecord {
 	}
 	
 	public function __toString() {
-		return $this->_class.' #'.$this->_data['id'];
+		return $this->_class.' #'.$this->_data[$this->_identifier];
 	}
 	
 	final public function _reflection() {
