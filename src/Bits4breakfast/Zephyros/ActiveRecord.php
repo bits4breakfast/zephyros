@@ -583,7 +583,7 @@ abstract class ActiveRecord {
 			
 			$this->_db->pick($this->_shard)->upsert( $this->_table, $this->_data, (isset($this->columns_to_increment)?$this->columns_to_increment:null) );
 			
-			if ( ( !isset($this->_data[$this->_identifier]) || ( isset($this->_data[$this->_identifier]) && $this->_data[$this->_identifier] == 0 ) ) && ( !isset($this->has_composite_primary_key) || ( isset($this->has_composite_primary_key) && !$this->has_composite_primary_key ) ) ) {
+			if ($this->_identifier == 'id') {
 				$this->_data[$this->_identifier] = (int) $this->_db->pick($this->_shard)->last_id();
 				if ( $this->_data[$this->_identifier] == 0 ) {
 					throw new PersistingErrorException();
