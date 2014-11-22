@@ -763,6 +763,7 @@ abstract class ActiveRecord {
 			'_class' => $this->_class,
 			'_name' => $this->_name,
 			'_table' => $this->_table,
+			'_identifier' => $this->_identifier,
 			'_fkName' => $this->_fkName,
 			'_columns' => $this->_columns
 		];
