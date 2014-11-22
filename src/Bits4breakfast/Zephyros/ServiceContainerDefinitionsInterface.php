@@ -1,7 +1,7 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-class ServiceContainerDefinitionsInterface {
+interface ServiceContainerDefinitionsInterface {
 
 	public function __construct($app_base_path) {}
 
