@@ -74,6 +74,7 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	}
 
 	public function to($recipient) {
+		$this->to = [];
 		if (isset($recipient['name']) && isset($recipient['email'])) {
 			$this->addAddress(self::cleanLine($recipient['email']), $recipient['name']);
 		} else if (is_array($recipient)) {
@@ -92,6 +93,8 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	}
 
 	public function toCC($cc) {
+		$this->cc = [];
+		
 		if (isset($cc)) {
 			if (is_array($cc)) {
 				foreach ($cc as $to) {
@@ -106,6 +109,8 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	}
 
 	public function toBCC($bcc) {
+		$this->bcc = [];
+
 		if (is_array($bcc)) {
 			foreach ($bcc as $to) {
 				$this->addBCC(self::cleanLine($to));
