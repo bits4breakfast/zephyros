@@ -152,6 +152,13 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 		return $this;
 	}
 
+	public function add_custom_header($name, $value = null)
+	{
+		$this->addCustomHeader($name, $value);
+
+		return $this;
+	}
+
 	private function setSMTP($auth = null, $host = null, $user = null, $pass = null, $secure = null, $port = 25) {
 		$this->SMTPAuth = $auth;
 		$this->Host = $host;
