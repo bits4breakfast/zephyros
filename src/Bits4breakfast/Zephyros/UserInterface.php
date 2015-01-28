@@ -114,6 +114,7 @@ abstract class UserInterface {
 	}
 
 	final public function render() {
+		$this->templates = [];
 		$this->build();
 				
 		$this->smarty->assign( 'data', (array)$this->data );
