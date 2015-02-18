@@ -583,7 +583,15 @@ abstract class ActiveRecord {
 			
 			$this->_db->pick($this->_shard)->upsert( $this->_table, $this->_data, (isset($this->columns_to_increment)?$this->columns_to_increment:null) );
 			
-			if ($this->_identifier == 'id' && $this->_data['id'] == 0) {
+			if (
+				$this->_identifier == 'id' && 
+				(
+					!isset($this->_data['id']) || 
+					(
+						isset($this->_data['id']) &&
+						$this->_data['id'] == 0
+					)
+				) {
 				$this->_data['id'] = (int) $this->_db->pick($this->_shard)->last_id();
 				if ($this->_data['id'] == 0) {
 					throw new PersistingErrorException();
