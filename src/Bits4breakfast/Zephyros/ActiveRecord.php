@@ -591,7 +591,8 @@ abstract class ActiveRecord {
 						isset($this->_data['id']) &&
 						$this->_data['id'] == 0
 					)
-				) {
+				)
+			) {
 				$this->_data['id'] = (int) $this->_db->pick($this->_shard)->last_id();
 				if ($this->_data['id'] == 0) {
 					throw new PersistingErrorException();
