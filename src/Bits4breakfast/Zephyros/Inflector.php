@@ -43,9 +43,9 @@ class Inflector {
 	}
 
 	public static function habtmTableName ( $first, $second ) {
-		$tableName = [ Inflector::plural( strtolower( $first ) ), Inflector::plural( strtolower($second) ) ];
-		sort( $tableName );
-		return implode( '_', $tableName );
+		$tableName = [strtolower($first), strtolower($second)];
+		sort($tableName);
+		return implode('_', $tableName);
 	}
 
 	public static function camelize( $string, $firstLetterUppercase = true ) {
