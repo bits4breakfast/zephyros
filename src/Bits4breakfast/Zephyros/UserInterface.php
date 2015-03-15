@@ -81,8 +81,12 @@ abstract class UserInterface {
 		$this->opengraph[] = ['key' => 'og:'.$key, 'value' => $value];	
 	}
 
-	final public function css( $path ) {
-		$this->stylesheets[] = $this->container->config()->get('assets_cdn_url') . $path;
+	final public function css($path, $remote = false) {
+		if ($remote) {
+			$this->stylesheets[] = $path;
+		} else {
+			$this->stylesheets[] = $this->container->config()->get('assets_cdn_url') . $path;
+		}
 	}
 
 	final public function js( $path, $remote = false ) {
