@@ -1,8 +1,8 @@
 <?php
 namespace Bits4breakfast\Zephyros;
 
-abstract class UserInterface {
-
+abstract class UserInterface
+{
 	protected $allow_caching = false;
 
 	protected $smarty = null;
@@ -20,68 +20,97 @@ abstract class UserInterface {
 	protected $scripts = [];
 	protected $templates = [];
 
-	final public function init_smarty() {
+	final public function init_smarty()
+	{
 		$config = $this->container->config();
 		$folder = implode(DIRECTORY_SEPARATOR, explode('\\', $config->get('kernel_namespace')));
 
 		$smarty = new \Smarty;
-		$smarty->setTemplateDir( 
-			[
-				$config->app_base_path.'/src/'.$folder.'/Template/'.$config->subdomain,
-				$config->app_base_path.'/src/'.$folder.'/Template'
-			] 
-		)
-		->setCompileDir( $config->get('smarty_cache_path') )
-		->setCacheDir( $config->get('smarty_cache_path') )
+		$smarty->setTemplateDir([
+			$config->app_base_path.'/src/'.$folder.'/Template/'.$config->subdomain,
+			$config->app_base_path.'/src/'.$folder.'/Template'
+		])
+		->registerPlugin(\Smarty::PLUGIN_MODIFIER, 'to_l', [$this, 'to_locale'])
+		->setCompileDir($config->get('smarty_cache_path'))
+		->setCacheDir($config->get('smarty_cache_path'))
 		->compile_check = $config->get('smarty_compile_check');
 		return $smarty;
 	}
+
+	final public function to_locale($value, $field = null, $language = null)
+	{
+		if (is_string($value) && $field === null) {
+			return $this->l->get($value);
+		}
+
+		if (empty($language)) {
+			$language = $this->l->lang;
+		}
+		$language = strtolower($language);
+
+		if (isset($value['_locale'][$language][$field])) {
+			return $value['_locale'][$language][$field];
+		} else if (isset($value['_locale']['en'][$field])) {
+			return $value['_locale']['en'][$field];
+		} else {
+			return '';
+		}
+	}
 	
-	final public function set_route( Route $route ) {
+	final public function set_route(Route $route)
+	{
 		$this->route = $route;
 		$this->smarty->assign('route', (array)$route);
 	}
 
-	final public function set_container( ServiceContainer $container ) {
+	final public function set_container(ServiceContainer $container)
+	{
 		$this->container = $container;
 		$this->smarty = $this->init_smarty();
-		$this->set_language_manager( $container->lm() );
+		$this->set_language_manager($container->lm());
 	}
 	
-	final private function set_language_manager( Service\LanguageManager $l ) {
+	final private function set_language_manager(Service\LanguageManager $l)
+	{
 		$this->l = $l;
 		$this->smarty->assign('l', $l);
 		$this->data['lang'] = $l->lang;
 	}
 
-	final public function set_user( $user = null ) {
+	final public function set_user($user = null)
+	{
 		$this->user = $user;
-		if ( $user ) {
+		if ($user) {
 			$this->data['user'] = $user->dump();
 		} else {
 			$this->data['user'] = null;
 		}
 
-		$this->smarty->assign( 'user', $this->data['user'] );
+		$this->smarty->assign('user', $this->data['user']);
 	}
 
-	final public function set_flash_message($message) {
+	final public function set_flash_message($message)
+	{
 		$this->flash_message = $message;
 	}
 
-	final public function set($key, $value) {
+	final public function set($key, $value)
+	{
 		$this->smarty->assign($key, $value);
 	}
 	
-	final public function metatag($name, $content) {
+	final public function metatag($name, $content)
+	{
 		$this->meta_tags[] = ['name' => $name, 'content' => $content];
 	}
 
-	final public function opengraph( $key, $value ) {
+	final public function opengraph($key, $value)
+	{
 		$this->opengraph[] = ['key' => 'og:'.$key, 'value' => $value];	
 	}
 
-	final public function css($path, $remote = false) {
+	final public function css($path, $remote = false)
+	{
 		if ($remote) {
 			$this->stylesheets[] = $path;
 		} else {
@@ -89,7 +118,8 @@ abstract class UserInterface {
 		}
 	}
 
-	final public function js( $path, $remote = false ) {
+	final public function js($path, $remote = false)
+	{
 		if($remote) {
 			$this->scripts[] = $path;
 		} else {
@@ -97,54 +127,61 @@ abstract class UserInterface {
 		}
 	}
 
-	final public function tpl( $path ) {
+	final public function tpl($path)
+	{
 		$this->templates[] = $path;
 	}
 	
-	final public function allow_caching() {
+	final public function allow_caching()
+	{
 		$this->allow_caching = true;
 	}
 
-	final public function will_cache() {
+	final public function will_cache()
+	{
 		return $this->allow_caching;
 	}
 	
-	final public function is_cached() {
-		return Cache::exists( $this->cache_key() );
+	final public function is_cached()
+	{
+		return Cache::exists($this->cache_key());
 	}
 	
-	public function cache_key() {
-		return 'pages:'.sha1( $_SERVER["REQUEST_URI"] );
+	public function cache_key()
+	{
+		return 'pages:'.sha1($_SERVER["REQUEST_URI"]);
 	}
 
-	final public function render() {
+	final public function render()
+	{
 		$this->templates = [];
 		$this->build();
 				
-		$this->smarty->assign( 'data', (array)$this->data );
-		$this->smarty->assign( 'config', $this->container->config()->dump() );
-		$this->smarty->assign( 'meta_tags', $this->meta_tags );
-		$this->smarty->assign( 'opengraph', $this->opengraph );
-		$this->smarty->assign( 'stylesheets', $this->stylesheets );
-		$this->smarty->assign( 'javascripts', $this->scripts );
+		$this->smarty->assign('data', (array)$this->data);
+		$this->smarty->assign('config', $this->container->config()->dump());
+		$this->smarty->assign('meta_tags', $this->meta_tags);
+		$this->smarty->assign('opengraph', $this->opengraph);
+		$this->smarty->assign('stylesheets', $this->stylesheets);
+		$this->smarty->assign('javascripts', $this->scripts);
 		if (!$this->allow_caching) {
-			$this->smarty->assign( 'flash_message', $this->flash_message );
+			$this->smarty->assign('flash_message', $this->flash_message);
 		}
 		
 		$output = "";
-		foreach ( $this->templates as $template ) {
-			$output .= $this->smarty->fetch( $template );
+		foreach ($this->templates as $template) {
+			$output .= $this->smarty->fetch($template);
 		}
 
 		return $output;
 	}
 	
-	final public function output() {
+	final public function output()
+	{
 		if ($this->allow_caching) {
 			$key = $this->cache_key();
 		
 			$output = Cache::get($key);
-			if ( $output === false ) {
+			if ($output === false) {
 				$output = $this->render();
 				Cache::set($key, $output);
 			}
