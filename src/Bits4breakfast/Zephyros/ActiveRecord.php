@@ -190,7 +190,11 @@ abstract class ActiveRecord {
 		$this->_related['_changed'][$property] = true;
 	}
 	
-	final public function localize( $arguments, $lang = 'en' ) {
+	final public function localize( $arguments = null, $lang = 'en' ) {
+		if (empty($arguments)) {
+			return $this->_localized;
+		}
+
 		$lang = strtolower($lang);
 		if ( is_scalar($arguments) ) {
 			if ( isset($this->_localized[$lang][$arguments]) ) {
