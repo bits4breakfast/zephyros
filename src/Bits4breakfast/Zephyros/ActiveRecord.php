@@ -372,7 +372,7 @@ abstract class ActiveRecord {
 					if ( isset($details['table_name']) && !empty($details['table_name']) ) {
 						$table_name = $details['table_name'];
 					} else {
-						$table_name = Inflector::plural(strtolower($relation));
+						$table_name = strtolower($relation);
 						$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
 						$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 					}
@@ -611,7 +611,7 @@ abstract class ActiveRecord {
 							if ( isset($details['table_name']) && !empty($details['table_name']) ) {
 								$table_name = $details['table_name'];
 							} else {
-								$table_name = Inflector::plural(strtolower($relation));
+								$table_name = strtolower($relation);
 								$table_name = ( isset($details['is_dependent']) && $details['is_dependent'] ? $this->_table.'_' : '' ).$table_name;
 								$table_name = ( isset($this->_database) && $this->_database != '' ? $this->_database.'.' : '' ).$table_name;
 							}
