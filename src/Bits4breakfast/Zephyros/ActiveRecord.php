@@ -171,9 +171,14 @@ abstract class ActiveRecord {
 		}
 	}
 	
-	final public function reset( $property ) {
-		$this->_related[$property] = [];
+	final public function reset($property)
+	{
+		if ($property == '_localized') {
+			$this->_localized = [];
+		} else {
+			$this->_related[$property] = [];
 		$this->_related['_changed'][$property] = true;
+		}
 	}
 	
 	final public function has( $property ) {
@@ -664,8 +669,16 @@ abstract class ActiveRecord {
 				$this->_db->pick($this->_shard)->delete( $this->_table.'_localized', [ $this->_fkName => $this->_data[$this->_identifier] ] );
 				foreach ( $this->_localized as $lang => $record ) {
 					$record = (array) $record;
-					$record = array_merge( [ $this->_fkName => $this->_data[$this->_identifier], 'lang' => $lang ], $record );
-					$this->_db->pick($this->_shard)->insert( $this->_table.'_localized', $record );
+					if (!empty($record)) {
+						$record = array_merge(
+							[
+								$this->_fkName => $this->_data[$this->_identifier], 
+								'lang' => $lang
+							], 
+							$record
+						);
+						$this->_db->pick($this->_shard)->insert( $this->_table.'_localized', $record );
+					}
 				}
 			}
 			
