@@ -48,10 +48,10 @@ abstract class UserInterface
 		}
 		$language = strtolower($language);
 
-		if (isset($value['_locale'][$language][$field])) {
-			return $value['_locale'][$language][$field];
-		} else if (isset($value['_locale']['en'][$field])) {
-			return $value['_locale']['en'][$field];
+		if (isset($value['_localized'][$language][$field])) {
+			return $value['_localized'][$language][$field];
+		} else if (isset($value['_localized']['en'][$field])) {
+			return $value['_localized']['en'][$field];
 		} else {
 			return '';
 		}
