@@ -11,6 +11,8 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 	public $From = null;
 	public $FromName = null;
 
+	private $last_message_id = null;
+
 	public function __construct(ServiceContainer $container) {
 		$this->container = $container;
 
@@ -165,6 +167,8 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 		$this->Username = $user;
 		$this->Password = $pass;
 		$this->Port = $port;
+		$this->SMTPDebug = 2;
+		$this->Debugoutput = $this;
 		if ($secure == 'ssl' || $secure == 'tls') {
 			$this->SMTPSecure = $secure;
 		}
@@ -174,11 +178,28 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 		}
 	}
 
-	public static function cleanLine($value) {
+	public static function cleanLine($value)
+	{
 		return trim(preg_replace('/(%0A|%0D|\n+|\r+)/i', '', $value));
 	}
 
-	public static function cleanText($value) {
+	public static function cleanText($value)
+	{
 		return trim(preg_replace('/(%0A|%0D|\n+|\r+)(content-type:|to:|cc:|bcc:)/i', '', $value));
+	}
+
+	public function last_message_id()
+	{
+		return $this->last_message_id;
+	}
+
+	public function __invoke($string)
+	{
+		if (strpos($string, 'SERVER -> CLIENT: 250 Ok') !== false) {
+			$string = str_replace(["\n", 'SERVER -> CLIENT: 250 Ok'], '', $string);
+			if (trim($string) != '') {
+				$this->last_message_id = trim($string);
+			}
+		}
 	}
 }
