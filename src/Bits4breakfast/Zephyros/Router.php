@@ -4,29 +4,29 @@ namespace Bits4breakfast\Zephyros;
 use Bits4breakfast\Zephyros\Exception\Http\BadRequestException;
 
 class Router {
-	private $p = null;
+	private $route = null;
 	private $config = null;
 
-	public function __construct(Route $p, Config $config) {
-		$this->p = $p;
+	public function __construct(Route $route, Config $config) {
+		$this->route = $route;
 		$this->config = $config;
 	}
 
 	public function route() {
 		if (isset($_POST["_method"])) {
-			$this->p->method = $_POST["_method"];
+			$this->route->method = $_POST["_method"];
 		} else {
-			$this->p->method = $_SERVER['REQUEST_METHOD'];
+			$this->route->method = $_SERVER['REQUEST_METHOD'];
 		}
 
-		if ($this->p->method != "GET" && $this->p->method != "POST" && $this->p->method != "PUT" && $this->p->method != "DELETE") {
+		if ($this->route->method != "GET" && $this->route->method != "POST" && $this->route->method != "PUT" && $this->route->method != "DELETE") {
 			throw new BadRequestException();
 		}
 
 		if ( isset($_GET['controller']) ) {
-			$this->p->controller = $_GET['controller'];
-			$this->p->action = isset($_GET['action']) ? $_GET['action'] : '';
-			$this->p->id = isset($_GET['id']) ? $_GET['id'] : 0;
+			$this->route->controller = $_GET['controller'];
+			$this->route->action = isset($_GET['action']) ? $_GET['action'] : '';
+			$this->route->id = isset($_GET['id']) ? $_GET['id'] : 0;
 		} else {
 			$uri = substr($_SERVER["REQUEST_URI"], 1);
 			if ( strpos($uri, "?") !== false ) {
@@ -34,49 +34,49 @@ class Router {
 				$uri = $uri[0];
 			}
 
-			list($this->p->controller, $this->p->action, $this->p->id) = (array) array_pad(explode("/", $uri), 3, "");
+			list($this->route->controller, $this->route->action, $this->route->id) = (array) array_pad(explode("/", $uri), 3, "");
 		}
 
 		foreach ( ['json', 'csv'] as $format ) {
-			if ( strpos($this->p->id, ".".$format) !== false ) {
-				$this->p->format = $format;
-				$this->p->id = str_replace(".".$format, "", $this->p->id);
+			if ( strpos($this->route->id, ".".$format) !== false ) {
+				$this->route->format = $format;
+				$this->route->id = str_replace(".".$format, "", $this->route->id);
 				break;
-			} else if ( strpos($this->p->controller, ".".$format) !== false ) {
-				$this->p->format = $format;
-				$this->p->controller = str_replace(".".$format, "", $this->p->controller);
+			} else if ( strpos($this->route->controller, ".".$format) !== false ) {
+				$this->route->format = $format;
+				$this->route->controller = str_replace(".".$format, "", $this->route->controller);
 				break;
-			} else if ( strpos($this->p->action, ".".$format) !== false ) {
-				$this->p->format = $format;
-				$this->p->action = str_replace(".".$format, "", $this->p->action);
+			} else if ( strpos($this->route->action, ".".$format) !== false ) {
+				$this->route->format = $format;
+				$this->route->action = str_replace(".".$format, "", $this->route->action);
 				break;
 			}
 		}
 
-		if ( is_numeric($this->p->action) ) {
-			$this->p->id = (int) $this->p->action;
-			$this->p->action = "";
+		if ( is_numeric($this->route->action) ) {
+			$this->route->id = (int) $this->route->action;
+			$this->route->action = "";
 		}
 
-		if ( $this->p->id != null ) {
-			if ( is_numeric($this->p->id) ) {
-				$this->p->id = (int) $this->p->id;
+		if ( $this->route->id != null ) {
+			if ( is_numeric($this->route->id) ) {
+				$this->route->id = (int) $this->route->id;
 			} else {
-				$this->p->id = @mysql_escape_string($this->p->id);
+				$this->route->id = @mysql_escape_string($this->route->id);
 			}
 		} else {
-			$this->p->id = 0;
+			$this->route->id = 0;
 		}
 
-		if ( $this->p->controller == "" ) {
-			$this->p->controller = "home";
+		if ( $this->route->controller == "" ) {
+			$this->route->controller = "home";
 		}
 		
 		return [
 			$this->config->get('kernel_namespace'),
 			'Controller',
-			ucfirst(strtolower($this->p->subdomain)),
-			Inflector::camelize($this->p->controller)
+			ucfirst(strtolower($this->route->subdomain)),
+			Inflector::camelize($this->route->controller)
 		];
 	}
 }
