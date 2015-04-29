@@ -341,12 +341,20 @@ class Mysql implements ServiceInterface
 
     public function start_transaction()
     {
+        if (!isset($this->connections[$this->use_shard]['write'])) {
+            $this->connect('write');
+        }
+
         $this->connections[$this->use_shard]['write']->autocommit(FALSE);
     }
 
     // FALSE => START TRANSACTION
     public function autocommit($mode) 
-    { 
+    {
+        if (!isset($this->connections[$this->use_shard]['write'])) {
+            $this->connect('write');
+        }
+
         $this->connections[$this->use_shard]['write']->autocommit($mode);
     }
 
