@@ -242,17 +242,15 @@ abstract class ActiveRecord {
 		}
 		
 		$result = $db->pick($temp->_shard)->select($temp->_table, $conditions, $options);
-
 		if ($result === false) {
 			throw new FindException($db->read_error(), $db->read_errno());
 		} else {
-			if ($result->num_rows == 0) {
+			if ($result === null) {
 				return null;
 			}
 			
 			if ($what == self::first || $what == self::last || $what == self::random) {
-				$temp = new $calledClass( $result->fetch_object()->{$temp->_identifier} );
-				$result->free();
+				$temp = new $calledClass($result->{$temp->_identifier});
 				return $temp;
 			} else {
 				return $result;
