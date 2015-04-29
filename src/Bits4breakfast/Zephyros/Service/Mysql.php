@@ -116,6 +116,49 @@ class Mysql implements ServiceInterface
         return $result;
     }
 
+    public function to_clauses($conditions = null)
+    {
+        if ($conditions === null) {
+            return ' 1';
+        } else if ( is_string($conditions) ) {
+            return $conditions;
+        } else {
+            $query = '';        
+            foreach ( (array)$conditions as $field => $value ) {
+                if ( is_numeric($field) && is_array($value) ) {
+                    $query .= '(';
+                    foreach ( $value as $field => $value ) {
+                        if ( $value == self::notnull ) {
+                            $query .= '`'.$field.'` IS NOT NULL OR ';
+                        } else if ( $value == self::isnull ) {
+                            $query .= '`'.$field.'` IS NULL OR ';
+                        } else if ( $value != null ) {
+                            if ( is_array($value) ) {
+                                $query .= '`'.$field.'` IN ("'.implode('","',$value).'") OR ';              
+                            } else {
+                                $query .= '`'.$field.'` = "'.$db->escape($value).'" OR ';
+                            }
+                        }   
+                    }
+                    $query = substr($query,0,-4). ') AND ';
+                } else {
+                    if ( $value == self::notnull ) {
+                        $query .= '`'.$field.'` IS NOT NULL AND ';
+                    } else if ( $value == self::isnull ) {
+                        $query .= '`'.$field.'` IS NULL AND ';
+                    } else if ( $value != null ) {
+                        if ( is_array($value) ) {
+                            $query .= '`'.$field.'` IN ("'.implode('","',$value).'") AND ';             
+                        } else {
+                            $query .= '`'.$field.'` = "'.$db->escape($value).'" AND ';
+                        }
+                    }
+                }
+            }
+            return substr($query,0,-5);
+        }
+    }
+
     public function upsert($table, $data, $incrementColumns = null)
     {
         if (!isset($this->connections[$this->use_shard]['write'])) {
@@ -197,21 +240,7 @@ class Mysql implements ServiceInterface
         }
         $query = substr($query, 0, -1);
 
-        $query .= ' WHERE';
-        if (is_array($fields)) {
-            foreach ($fields as $key => $value) {
-                if ($value === self::now) {
-                    $query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
-                } else if ($value === self::current_date) {
-                    $query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
-                } else {
-                    $query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
-                }
-            }
-            $query = substr($query, 0, -4);
-        } else {
-            $query .= ' '.$fields;
-        }
+        $query .= ' WHERE '.$this->to_clauses($fields);
 
         if ($limit > 0) {
             $query .= ' LIMIT '.$limit;
@@ -225,23 +254,8 @@ class Mysql implements ServiceInterface
         if (!isset($this->connections[$this->use_shard]['write'])) {
             $this->connect('write');
         }
-
-        $query = 'DELETE FROM '.$table.' WHERE';
-        if (is_array($fields)) {
-            foreach ($fields as $key => $value) {
-                if ($value === self::now) {
-                    $query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
-                } else if ($value === self::current_date) {
-                    $query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
-                } else {
-                    $query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
-                }
-            }
-            $query = substr($query, 0, -4);
-        } else {
-            $query .= ' '.$fields;
-        }
-        return $this->write($query);
+        
+        return $this->write('DELETE FROM '.$table.' WHERE '.$this->to_clauses($fields));
     }
 
     public function select($table, $restrictions, $limit = 1)
@@ -250,21 +264,7 @@ class Mysql implements ServiceInterface
             $this->connect('read');
         }
 
-        $query = 'SELECT * FROM '.$table.' WHERE';
-        if (is_array($restrictions)) {
-            foreach ($restrictions as $key => $value) {
-                if ($value === self::now) {
-                    $query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';
-                } else if ($value === self::current_date) {
-                    $query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND';
-                } else {
-                    $query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
-                }
-            }
-            $query = substr($query, 0, -4);
-        } else {
-            $query .= ' '.$restrictions;
-        }
+        $query = 'SELECT * FROM '.$table.' WHERE '.$this->to_clauses($restrictions);
 
         if ($limit > 0) {
             $query .= ' LIMIT '.$limit;
@@ -283,23 +283,7 @@ class Mysql implements ServiceInterface
             $this->connect('read');
         }
 
-        $query = 'SELECT COUNT(*) FROM '.$table.' WHERE';
-        if ($fields === null) {
-            $query .= ' 1';
-        } else if (is_array($fields)) {
-            foreach ($fields as $key => $value) {
-                if ($value === self::now) {
-                    $query .= ' `'.$this->escape($key).'` = "'.self::utc_timestamp().'" AND';   
-                } else if ($value === self::current_date) {
-                    $query .= ' `'.$this->escape($key).'` = DATE("'.self::utc_timestamp().'") AND'; 
-                } else {
-                    $query .= ' `'.$this->escape($key).'` = "'.$this->escape($value).'" AND';
-                }
-            }
-            $query = substr($query, 0, -4);
-        } else {
-            $query .= ' '.$fields;
-        }
+        $query = 'SELECT COUNT(*) FROM '.$table.' WHERE '.$this->to_clauses($fields);
         
         return (int) $this->result($query);
     }
