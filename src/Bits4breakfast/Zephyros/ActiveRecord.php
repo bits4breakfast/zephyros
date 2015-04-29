@@ -222,78 +222,35 @@ abstract class ActiveRecord {
 		}
 	}
 	
-	final public static function find( $what = self::first, $conditions = null, $options = null ) {
+	final public static function find($what = self::first, $conditions = null, $options = null) {
 		$calledClass = get_called_class();
 		$temp = new $calledClass();
 		$temp = $temp->_reflection();
 		
 		$db = ServiceContainer::init()->db();
 
-		if ( is_string($conditions) ) {
-			$query = $conditions;	
-		} else {
-			$query = '';		
-			foreach ( (array)$conditions as $field => $value ) {
-				if ( is_numeric($field) && is_array($value) ) {
-					$query .= '(';
-					foreach ( $value as $field => $value ) {
-						if ( $value == self::notnull ) {
-							$query .= '`'.$field.'` IS NOT NULL OR ';
-						} else if ( $value == self::isnull ) {
-							$query .= '`'.$field.'` IS NULL OR ';
-						} else if ( $value != null ) {
-							if ( is_array($value) ) {
-								$query .= '`'.$field.'` IN ("'.implode('","',$value).'") OR ';				
-							} else {
-								$query .= '`'.$field.'` = "'.$db->escape($value).'" OR ';
-							}
-						}	
-					}
-					$query = substr($query,0,-4). ') AND ';
-				} else {
-					if ( $value == self::notnull ) {
-						$query .= '`'.$field.'` IS NOT NULL AND ';
-					} else if ( $value == self::isnull ) {
-						$query .= '`'.$field.'` IS NULL AND ';
-					} else if ( $value != null ) {
-						if ( is_array($value) ) {
-							$query .= '`'.$field.'` IN ("'.implode('","',$value).'") AND ';				
-						} else {
-							$query .= '`'.$field.'` = "'.$db->escape($value).'" AND ';
-						}
-					}
-				}
-			}
-			$query = substr($query,0,-5);
+		$options = is_array($options) ? $options : [];
+		$options['field'] = $temp->_identifier;
+		
+		if ($what == self::first || $what == self::last || $what == self::random) {
+			$options['limit'] = 1;
+		}
+		if ($what == self::last) {
+			$options['orderby'] = '`'.$temp->_identifier.'` DESC';
+		} else if ($what == self::random) {
+			$options['orderby'] = 'RAND() DESC';
 		}
 		
-		$query = 'SELECT `'.$temp->_identifier.'` FROM '.( trim($temp->_database) != '' ? '`'.$temp->_database.'`.' : '' ).'`'.$temp->_table.'`'.( empty($conditions) ? '' : ' WHERE '.$query );
-		if ( $what == self::first ) {
-			$query .= ' LIMIT 1';
-		} else if ( $what == self::last ) {
-			$query .= ' ORDER BY `'.$temp->_identifier.'` DESC LIMIT 1';
-		} else if ( $what == self::random ) {
-			$query .= ' ORDER BY RAND() LIMIT 1';
+		$result = $db->pick($temp->_shard)->select($temp->_table, $conditions, $options);
+
+		if ($result === false) {
+			throw new FindException($db->read_error(), $db->read_errno());
 		} else {
-			if ( isset($options['orderby']) ) {
-				$query .= ' ORDER BY '.$options['orderby'];
-			}
-			
-			if (isset($options['limit']) && $options['limit'] > 0) {
-				$start = isset($options['start']) ? (int) $options['start'] : 0;
-				$query .= ' LIMIT '.$start.','.$options['limit'];
-			}
-		}
-		
-		$result = $db->pick( $temp->_shard )->read( $query );
-		if ( $result === false ) {
-			throw new FindException( $db->read_error(), $db->read_errno() );
-		} else {
-			if ( $result->num_rows == 0 ) {
+			if ($result->num_rows == 0) {
 				return null;
 			}
 			
-			if ( $what == self::first || $what == self::last || $what == self::random ) {
+			if ($what == self::first || $what == self::last || $what == self::random) {
 				$temp = new $calledClass( $result->fetch_object()->{$temp->_identifier} );
 				$result->free();
 				return $temp;
@@ -303,8 +260,14 @@ abstract class ActiveRecord {
 		}
 	}
 	
-	final public static function exists( $conditions = null) {
-		if ( empty($conditions) ) {
+	final public static function exists($conditions = null) 
+	{
+		return self::count($conditions) > 0;
+	}
+
+	final public static function count($conditions = null) 
+	{
+		if (empty($conditions)) {
 			return null;
 		}
 	
@@ -314,25 +277,12 @@ abstract class ActiveRecord {
 		
 		$db = ServiceContainer::init()->db();
 
-		$query = '';
-		foreach ( $conditions as $field => $value ) {
-			if ( $value == self::notnull ) {
-				$query .= '`'.$field.'` IS NOT NULL AND ';
-			} else if ( $value == self::isnull ) {
-				$query .= '`'.$field.'` IS NULL AND ';
-			} else {
-				$query .= '`'.$field.'` = "'.$db->escape($value).'" AND ';
-			}
-		}
-		
-		$query = 'SELECT COUNT(*) FROM '.( trim($temp->_database) != '' ? '`'.$temp->_database.'`.' : '' ).'`'.$temp->_table.'` WHERE '.substr($query,0,-5);
-		
-		$result = $db->pick( $temp->_shard )->read( $query );
-		if ( $result === false ) {
-			return false;
-		} else {
-			return ( $result->num_rows > 0 );
-		}
+		$count = $this->_db->pick($this->_shard)->count(
+			$temp->_table,
+			$conditions
+		);
+
+		return $count;
 	}
 	
 	private function _load( $strict = false ) {

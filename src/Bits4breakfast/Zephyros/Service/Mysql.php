@@ -136,7 +136,7 @@ class Mysql implements ServiceInterface
                             if ( is_array($value) ) {
                                 $query .= '`'.$field.'` IN ("'.implode('","',$value).'") OR ';              
                             } else {
-                                $query .= '`'.$field.'` = "'.$db->escape($value).'" OR ';
+                                $query .= '`'.$field.'` = "'.$this->escape($value).'" OR ';
                             }
                         }   
                     }
@@ -150,7 +150,7 @@ class Mysql implements ServiceInterface
                         if ( is_array($value) ) {
                             $query .= '`'.$field.'` IN ("'.implode('","',$value).'") AND ';             
                         } else {
-                            $query .= '`'.$field.'` = "'.$db->escape($value).'" AND ';
+                            $query .= '`'.$field.'` = "'.$this->escape($value).'" AND ';
                         }
                     }
                 }
@@ -258,16 +258,24 @@ class Mysql implements ServiceInterface
         return $this->write('DELETE FROM '.$table.' WHERE '.$this->to_clauses($fields));
     }
 
-    public function select($table, $restrictions, $limit = 1)
+    public function select($table, $restrictions, $options = null)
     {
         if (!isset($this->connections[$this->use_shard]['read'])) {
             $this->connect('read');
         }
 
-        $query = 'SELECT * FROM '.$table.' WHERE '.$this->to_clauses($restrictions);
+        $field = isset($options['field']) ? $options['field'] : '*';
 
+        $query = 'SELECT '.$field.' FROM '.$table.' WHERE '.$this->to_clauses($restrictions);
+
+        if (isset($options['orderby'])) {
+            $query .= 'ORDER BY '.$options['orderby'];
+        }
+
+        $start = isset($options['start']) ? (int)$options['start'] : 0;
+        $limit = (isset($options['limit']) ? (int)$options['limit'] : 0);
         if ($limit > 0) {
-            $query .= ' LIMIT '.$limit;
+            $query .= ' LIMIT '.$start.','.$limit;
         }
 
         if ($limit == 1) {
