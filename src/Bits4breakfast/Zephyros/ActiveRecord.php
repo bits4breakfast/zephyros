@@ -248,6 +248,9 @@ abstract class ActiveRecord {
 			if ($result === null) {
 				return null;
 			}
+			if ($result->num_rows == 0) {
+				return null;
+			}
 			
 			if ($what == self::first || $what == self::last || $what == self::random) {
 				$temp = new $calledClass($result->{$temp->_identifier});
