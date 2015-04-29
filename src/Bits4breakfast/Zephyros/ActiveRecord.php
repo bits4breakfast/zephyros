@@ -248,7 +248,7 @@ abstract class ActiveRecord {
 			if ($result === null) {
 				return null;
 			}
-			if ($result->num_rows == 0) {
+			if ($what == self::all && $result->num_rows == 0) {
 				return null;
 			}
 			
