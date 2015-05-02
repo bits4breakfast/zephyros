@@ -35,14 +35,16 @@ class LanguageManager implements ServiceInterface {
 		} else {
 			$text = $this->container->cache()->get( 'lm:'.$this->lang.':'.$code );
 			if ( false === $text ) {
-				$text = $this->db->pick('setup')->result("SELECT IF(COUNT(*),text,'') FROM constants_translations LEFT JOIN constants ON constant_id=constants.id WHERE code='".$code."' AND lang='".$this->lang."'");
+				$default_shard = $this->container->config()->get('database_shards_default');
+				
+				$text = $this->db->pick($default_shard)->result("SELECT IF(COUNT(*),text,'') FROM constants_translations LEFT JOIN constants ON constant_id=constants.id WHERE code='".$code."' AND lang='".$this->lang."'");
 				
 				if ( trim($text) != '' ) {
 					$this->container->cache()->set( 'lm:'.$this->lang.':'.$code, $text );
 				} else {
 					$text = $this->container->cache()->get( 'lm:EN:'.$code );
 					if ( false === $text ) {
-						$text = $this->db->pick('setup')->result("SELECT IF(COUNT(*),text,'') FROM constants_translations LEFT JOIN constants ON constant_id=constants.id WHERE code='".$code."' AND lang='EN'");
+						$text = $this->db->pick($default_shard)->result("SELECT IF(COUNT(*),text,'') FROM constants_translations LEFT JOIN constants ON constant_id=constants.id WHERE code='".$code."' AND lang='EN'");
 						
 						if ( trim($text) != '' ) {
 							$this->container->cache()->set( 'lm:'.$this->lang.':'.$code, $text );
