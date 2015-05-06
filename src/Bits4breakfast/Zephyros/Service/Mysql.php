@@ -266,10 +266,14 @@ class Mysql implements ServiceInterface
 
         $field = isset($options['field']) ? $options['field'] : '*';
 
-        $query = 'SELECT '.$field.' FROM '.$table.' WHERE '.$this->to_clauses($restrictions);
+        $query = 'SELECT '.$field.' FROM '.$table;
+
+        if (!empty($restrictions)) {
+            $query .= ' WHERE '.$this->to_clauses($restrictions);
+        }
 
         if (isset($options['orderby'])) {
-            $query .= 'ORDER BY '.$options['orderby'];
+            $query .= ' ORDER BY '.$options['orderby'];
         }
 
         $start = isset($options['start']) ? (int)$options['start'] : 0;
