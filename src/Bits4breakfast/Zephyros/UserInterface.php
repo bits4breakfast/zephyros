@@ -31,18 +31,20 @@ abstract class UserInterface
 			$config->app_base_path.'/src/'.$folder.'/Template'
 		])
 		->registerPlugin(\Smarty::PLUGIN_MODIFIER, 'to_l', [$this, 'to_locale'])
+		->registerPlugin(\Smarty::PLUGIN_MODIFIER, 'lm', [$this, 'fetch_language_manager_translation'])
 		->setCompileDir($config->get('smarty_cache_path'))
 		->setCacheDir($config->get('smarty_cache_path'))
 		->compile_check = $config->get('smarty_compile_check');
 		return $smarty;
 	}
 
+	final public function fetch_language_manager_translation($code, $search = null, $replace = null)
+	{
+		return $this->l->get($code, $search, $replace);
+	}
+
 	final public function to_locale($value, $field = null, $language = null)
 	{
-		if (is_string($value) && $field === null) {
-			return $this->l->get($value);
-		}
-
 		if (empty($language)) {
 			$language = $this->l->lang;
 		}
