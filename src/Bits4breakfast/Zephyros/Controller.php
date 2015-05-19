@@ -20,7 +20,8 @@ class Controller {
 	protected $request = null;
 	protected $response = null;
 
-	final public function __construct(Route $route, ServiceContainer $container) {
+	final public function __construct(Route $route, ServiceContainer $container)
+	{
 		$this->route = $route;
 
 		$this->container = $container;
@@ -50,11 +51,13 @@ class Controller {
 		}
 	}
 
-	final public function get($service_id) {
+	final public function get($service_id)
+	{
 		return $this->container->get($service_id);
 	}
 
-	final public function request() {
+	final public function request()
+	{
 		if ($this->request === null) {
 			$this->request = Request::createFromGlobals();
 		}
@@ -62,7 +65,8 @@ class Controller {
 		return $this->request;
 	}
 
-	public function render() {
+	public function render()
+	{
 		try {
 			if ($this->user === null && isset($this->requires_authentication) && $this->requires_authentication) {
 				if ($this->route->format == 'html') {
@@ -86,14 +90,13 @@ class Controller {
 		} catch (HttpException $e) {
 			$this->_render_error($e->getCode(), $e->getMessage(), $e->payload);
 		} catch (\Exception $e) {
-			if ($this->config->is_dev()) {
-				var_dump($e);
-			}
+			$this->container->logger()->log('CRITICAL', $e);
 			$this->_render_error(500);
 		}
 	}
 
-	final protected function _render_error($error_code, $message = '', $payload = []) {
+	final protected function _render_error($error_code, $message = '', $payload = [])
+	{
 		$this->db->general_rollback();
 		http_response_code($error_code);
 		if ($this->route->format == 'html') {
@@ -109,7 +112,8 @@ class Controller {
 		}
 	}
 
-	final protected function _default() {
+	final protected function _default()
+	{
 		$class_methods = get_class_methods($this);
 
 		if ($this->route->action != '' && $this->route->id == '') {
@@ -147,7 +151,8 @@ class Controller {
 		}
 	}
 
-	protected function prevent_caching() {
+	protected function prevent_caching()
+	{
 		header("ETag: PUB" . time());
 		header("Last-Modified: " . gmdate("D, d M Y H:i:s", time()-1000) . " GMT");
 		header("Expires: " . gmdate("D, d M Y H:i:s", time() - 100) . " GMT");
@@ -155,7 +160,8 @@ class Controller {
 		header("Cache-Control: max-age=1, s-maxage=1, no-cache, must-revalidate");
 	}
 
-	final public function redirect_to( $controller = null, $action = null, $id = null, $parameters = null ) {
+	final public function redirect_to( $controller = null, $action = null, $id = null, $parameters = null )
+	{
 		$path = '/';
 		if ( !empty($controller) ) {
 			$path .= $controller;
@@ -173,12 +179,14 @@ class Controller {
 		header('Location: '.$path);
 	}
 
-	public function logout() {
+	public function logout()
+	{
 		$this->user = null;
 		unset( $_SESSION['user_id'] );
 	}
 
-	public final function shutdown() {
+	public final function shutdown()
+	{
 		if (method_exists($this, 'before_shutdown')) {
 			$this->before_shutdown();
 		}
@@ -212,7 +220,8 @@ class Controller {
 		$this->container->cache()->commit();
 	}
 
-	public function response($code = 'ACK', $payload = null) {
+	public function response($code = 'ACK', $payload = null)
+	{
 		$this->response = [
 			'success' => ( $code == 'ACK' ),
 			'code' => $code,
@@ -220,7 +229,8 @@ class Controller {
 		];
 	}
 
-	public function attach_csv($titles = [], $feed = []) {
+	public function attach_csv($titles = [], $feed = [])
+	{
 		header("Content-type: text/csv");
 		header('Content-Disposition: attachment; filename="'.$this->route->controller.'-'.( $this->route->action != '' ? $this->route->action.'-' : '' ).@date("YmdHis").'.csv"');
 
