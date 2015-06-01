@@ -18,6 +18,8 @@ class Mailer extends \PHPMailer implements ServiceInterface{
 
 		parent::__construct(true);
 
+		$this->CharSet = 'UTF-8';
+
 		$config = $this->container->config();
 		if ($config->is_dev()) {
 			$this->IsMail();
