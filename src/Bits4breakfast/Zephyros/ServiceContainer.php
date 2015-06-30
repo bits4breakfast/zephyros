@@ -44,7 +44,9 @@ class ServiceContainer {
 			$logger->pushHandler(
 				new \Monolog\Handler\StreamHandler(
 					$config->get('log.dir_path').'/'.@date('Y-m-d').'.log', 
-					($config->get('log.level') ? $config->get('log.level') : 500)
+					($config->get('log.level') ? $config->get('log.level') : 500),
+					true,
+					0777
 				)
 			);
 		}
