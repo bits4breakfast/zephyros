@@ -82,8 +82,10 @@ abstract class UserInterface
 	final public function set_user($user = null)
 	{
 		$this->user = $user;
-		if ($user) {
+		if ($user && is_object($user) && method_exists($user, 'dump')) {
 			$this->data['user'] = $user->dump();
+		} else if ($user && is_array($user)) {
+			$this->data['user'] = $user;
 		} else {
 			$this->data['user'] = null;
 		}
