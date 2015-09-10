@@ -278,7 +278,7 @@ abstract class ActiveRecord {
 		
 		$db = ServiceContainer::init()->db();
 
-		$count = $this->_db->pick($this->_shard)->count(
+		$count = $db->pick($temp->_shard)->count(
 			$temp->_table,
 			$conditions
 		);
@@ -662,11 +662,11 @@ abstract class ActiveRecord {
 			foreach ( $this->_related[$key] as $record ) {
 				if ( is_array($record) ) {
 					unset($record[$fk]);
-					$record = array_merge( [$fk => $this->_data[$this->_identifier]], $reco );
+					$record = array_merge( [$fk => $this->_data[$this->_identifier]], $record );
 				} else {
 					$record = (array)$record;
 					unset($record[$fk]);
-					$record = array_merge( [$fk => $this->_data[$this->_identifier]], $reco );
+					$record = array_merge( [$fk => $this->_data[$this->_identifier]], $record );
 				}
 				
 				$this->_db->pick($this->_shard)->insert( $table_name, $record );
