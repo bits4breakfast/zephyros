@@ -192,7 +192,7 @@ class Controller {
 		}
 
 		if ($this->route->format == 'json') {
-			if ($this->response == null) {
+			if ($this->response === null) {
 				$this->response();
 			}
 			echo json_encode($this->response);
